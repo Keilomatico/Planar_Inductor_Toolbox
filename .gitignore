@@ -1,0 +1,12 @@
+# Folders
+femm/
+logfiles/
+data/
+
+# FEMM
+*.ans
+*.db
+*.asv
+
+# Matlab
+*.asv
