@@ -8,7 +8,8 @@ The core function also needs to specify some other properties like symmetry. In 
 
 
 ![Flowchart of the simulation script. The process is run twice, once for the planar simulation and once for the axisymmetric simulation.](figures/Simulation_Script_Evaluate.png)
-The firgure above shows a simplified flowchart of the software. First, the core is drawn as just explained. Self- and mutual-inductance are determined by exciting one winding at 1.5 MHz and dividing flux linkage of each coil by the exciting current. From self and mutual inductance the coupling-factor can be calculated.
+
+The figure above shows a simplified flowchart of the software. First, the core is drawn as just explained. Self- and mutual-inductance are determined by exciting one winding at 1.5 MHz and dividing flux linkage of each coil by the exciting current. From self and mutual inductance the coupling-factor can be calculated.
 For the axisymmetric simulation, there is only one coil so only self-inductance can be determined. It uses the coupling-factor from the planar simulation for the next steps.  
 Using the inductance and coupling-factor, the switching frequency is calculated. A desired negative current is specified such that the required ripple only depends on the desired output current.  
 Next, the current waveforms are calculated. Transistor conduction loss is immediately calculated using the RMS-current. Required input and output capacitance are also calculated.  
