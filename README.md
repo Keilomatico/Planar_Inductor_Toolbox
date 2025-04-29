@@ -90,6 +90,6 @@ After simulating a few designs using `simCustomCore`, use this script to compare
 
 1. Identify the relevant parameters that fully describe the new geometry.
 2. Add a new design to the `designs` file with these parameters.
-3. Create a new core file similar to `coreSingleInductor` or `coreFourPole` that uses the parameters to create an `Inductor` object. It must calculate the rectangles for planar and axisymmetric simulation and calculates the other `Inductor` properties.
+3. Create a new core file similar to `coreSingleInductor` or `coreFourPole` that uses the parameters to create an `Inductor` object. It must calculate the rectangles for planar and axisymmetric simulation and the other `Inductor` properties.
 4. Update `simDesign` in `simCustomCore` to the new design number.
 5. Run the simulation.
