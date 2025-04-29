@@ -26,7 +26,7 @@ Before using the software you need to install [FEMM](https://www.femm.info/wiki/
 
 <details>
 <summary><strong>simCustomCore</strong></summary>
-<p>Run this script to simulate a design.</p>
+<p>This script is the heart of the program. It calls all the other functions and executes the algorithm described above. Run this script to simulate a design. </p>
 </details>
 
 <details>
@@ -64,7 +64,7 @@ An <strong>Inductor</strong> object is returned.
 
 <details>
 <summary><strong>drawPlanarInductor</strong> and <strong>drawAxisymmetricInductor</strong></summary>
-<p>These functions take an Inductor object and use it to create the design in FEMM.</p>
+<p>These functions take an `Inductor` object and use it to create the design in FEMM.</p>
 </details>
 
 <details>
@@ -90,7 +90,6 @@ After simulating a few designs using `simCustomCore`, use this script to compare
 
 1. Identify the relevant parameters that fully describe the new geometry.
 2. Add a new design to the `designs` file with these parameters.
-3. Create a new core file similar to `coreSingleInductor` or `coreFourPole`:
-   - Translate parameters into rectangles for planar and axisymmetric simulation.
+3. Create a new core file similar to `coreSingleInductor` or `coreFourPole` that uses the parameters to create an `Inductor` object. It must calculate the rectangles for planar and axisymmetric simulation and calculates the other `Inductor` properties.
 4. Update `simDesign` in `simCustomCore` to the new design number.
 5. Run the simulation.
