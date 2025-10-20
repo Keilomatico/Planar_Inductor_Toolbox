@@ -1,0 +1,353 @@
+# This file is part of the Planar Inductor Toolbox
+# Copyright (C) 2025 Adrian Keil
+# 
+# The Planar Inductor Toolbox is free software: you can redistribute it 
+# and/or modify it under the terms of the GNU General Public License as 
+# published by the Free Software Foundation, either version 3 of the 
+# License, or (at your option) any later version.
+# 
+# The Planar Inductor Toolbox is distributed in the hope that it will be
+# useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  
+# If not, see https://www.gnu.org/licenses/gpl-3.0.html
+
+import numpy as np
+import time
+import os
+from pathlib import Path
+import femm
+import pickle
+import pandas as pd
+
+# Import the required modules (these need to be created/converted from MATLAB)
+from simulationParameters import SimulationParameters
+from designs import designs
+from Message import Message
+from Result import Result
+from drawPlanarInductor import draw_planar_inductor
+from drawAxisymmetricInductor import draw_axisymmetric_inductor
+from getInductancePlanar import get_inductance_planar
+from getInductanceAxi import get_inductance_axi
+from getWaveformMath import get_waveform_math
+from calcCapacitance import calc_capacitance
+from myrms import my_rms
+from getSpectrum import get_spectrum
+from sortData import sort_data
+from corelossSullivan import coreloss_sullivan
+
+# Specify which windings should be simulated
+simDesign = [4]
+
+# Create a new instance of the simulation parameters
+simParam = SimulationParameters()
+
+## Iterate over all windings specified in simWindings
+for simCounter in range(len(simDesign)):
+    ## Prepare a fresh start
+    # Note: Python doesn't need explicit variable clearing like MATLAB
+    # Variables are automatically garbage collected
+    start_time = time.time()
+
+    # Get the current winding
+    mywinding = simDesign[simCounter]
+
+    # Create new inductor object with the design
+    myind = designs(mywinding, simParam)
+
+    # Define a new message object which is used to store all messages into a logfile and print messages to the console which are above a specified priority
+    msg = Message(f"{simParam.log_folder}/{myind.uniqueName}.txt")
+    msg.print_msg(1, f"------------ {myind.description} ------------\n", simParam)
+    msg.print_msg(1, f"simDesign={mywinding}\n", simParam)
+
+    ## Draw the inductor and get the inductance
+    # For coupled designs, the inductance is always determined from
+    # planar simulation because axisymmetric cannot reflect coupling
+    # (except for designs with both windigs on one limb but that is 
+    # too special to make an exception)
+    result = [None, None]  # result[0] for planar, result[1] for axi
+    
+    if simParam.SIMULATIONS[0] == 1 or not (myind.coupled == 0):
+        # Prepare a result object
+        result[0] = Result()
+        draw_planar_inductor(myind, simParam)
+        result[0] = get_inductance_planar(myind, result[0], msg, simParam)
+
+    ## Draw the axisymmetric inductor if the user wants to do an axisymmetric simulation
+    if simParam.SIMULATIONS[1] == 1:
+        draw_axisymmetric_inductor(myind, simParam)
+        # Reuse the contents of result[0] and only modify L_self
+        # The reason is, that the other parameters cannot be determined
+        # from axisymmetric simulation for coupled inductors
+        if simParam.SIMULATIONS[0] == 1 or not (myind.coupled == 0):
+            result[1] = Result()
+            # Copy relevant attributes from result[0]
+            result[1].__dict__.update(result[0].__dict__)
+        else:
+            result[1] = Result()
+            result[1].k = 0
+            result[1].L_coupled = 0
+        result[1] = get_inductance_axi(myind, result[1], msg, simParam)
+
+    ## Main simulation loop
+    for simnum in range(2):  # 0 for planar, 1 for axi
+        if simParam.SIMULATIONS[simnum] == 1:
+            if simnum == 0:
+                msg.print_msg(1, "------ Planar Simulation ------\n", simParam)
+            else:
+                msg.print_msg(1, "\n------ Axisymmetric Simulation ------\n", simParam)
+
+            ## Calculate the required frequency for soft-switching
+            # Approximate the required negative current from the desired dead time
+            Ineg = simParam.Vin * simParam.Cds / simParam.deadTime
+            leg_ripple = 2 * simParam.iout_avg / 2 + 2 * Ineg
+        
+            # Calculate the switching frequency to achieve the negative current
+            if simParam.D < 0.5:
+                result[simnum].fs = simParam.Vin * simParam.D / (2 * result[simnum].L_self * leg_ripple) * \
+                    (2 / (1 + result[simnum].k) * (0.5 - simParam.D) + 1 / (1 - result[simnum].k))
+            else:
+                result[simnum].fs = simParam.Vin * simParam.Ts * (1 - simParam.D) / (2 * result[simnum].L_self * leg_ripple) * \
+                    (2 / (1 + result[simnum].k) * (simParam.D - 0.5) + 1 / (1 - result[simnum].k))
+            msg.print_msg(2, f"fs = {result[simnum].fs*1e-6:.2f} MHz\n", simParam)
+        
+            ## Get the waveform
+            current, time_array = get_waveform_math(simParam, result[simnum].fs, result[simnum])
+            if simParam.SHOWPLOTS:
+                import matplotlib.pyplot as plt
+                plt.figure()
+                plt.plot(time_array, current['i1'], label='I_1')
+                plt.plot(time_array, current['i2'], label='I_2')
+                plt.grid(True)
+                plt.xlabel("Time [s]")
+                plt.ylabel("Current [A]")
+                plt.legend(loc='upper left')
+                plt.xlim([0, 1/result[simnum].fs])
+                plt.show()
+        
+            ## Calculate required input and output capacitance
+            if simParam.CALC_CAP:
+                result[simnum] = calc_capacitance(time_array, current, result[simnum], simParam)
+                msg.print_msg(2, f"Required input capacitance: {result[simnum].Cin*1e6:.1f} uF\n", simParam)
+                msg.print_msg(2, f"Required output capacitance: {result[simnum].Cout*1e6:.1f} uF\n", simParam)
+        
+            ## MOSFET conduction-loss
+            result[simnum].conduction_loss = simParam.Rds_on * my_rms(time_array, current['i1'])**2 * 2    # *2 because of two legs
+            msg.print_msg(1, f"Transistor conduction loss: {result[simnum].conduction_loss:.1f}W\n", simParam)
+    
+            ## Perform an FFT of the current and analyze the largest harmonics
+            # Get Spectrum of the current
+            amplitude_1, f = get_spectrum(current['i1'], time_array, 100)
+            amplitude_2, _ = get_spectrum(current['i2'], time_array, 100)
+        
+            # Sort spectrum by amplitude
+            # Currents are identical, just phase-shifted so they contain the same
+            # absolute frequency components. Therefore both calls to sort_data return
+            # the same order of frequencies.
+            amp1_sorted, f_sorted = sort_data(amplitude_1, f)
+            amp2_sorted, _ = sort_data(amplitude_2, f)
+        
+            # Initialize some variables depending on which simulation is
+            # currently running
+            if simnum == 0:
+                areaCenters = myind.centers_planar
+                areaNames = myind.names_planar
+                rawFile = myind.filename_planar
+            elif simnum == 1:
+                areaCenters = myind.centers_axi
+                areaNames = myind.names_axi
+                rawFile = myind.filename_axi
+    
+            # Initialize the waveform variables
+            time_interpol = np.linspace(0, time_array[-1], 1000)
+            result[simnum].bx_waveform = np.zeros((len(areaCenters[0]), len(time_interpol)))
+            result[simnum].by_waveform = np.zeros((len(areaCenters[0]), len(time_interpol)))
+            
+            # Initialize loss arrays
+            result[simnum].loss_copper = 0
+            result[simnum].loss_copper_harmonic = []
+            result[simnum].Hdc = np.zeros(len(areaCenters[0]))
+            result[simnum].loss_core_area = np.zeros(len(areaNames))
+            
+            # Analyze the larges NUM_HARMONICS harmonics plus DC
+            for harmonic in range(simParam.NUM_HARMONICS + 1):
+                # If the amplitude of the harmonic is much smaller than the
+                # biggest one, break
+                if abs(amp1_sorted[harmonic]) < abs(simParam.HARMONIC_FACTOR * amp1_sorted[0]):
+                    break
+
+                # Create/open a simulation file for the current frequency
+                femm.openfemm()
+                if simParam.MINIMIZE_FEMM:
+                    femm.main_minimize()
+                freqfile = f"{rawFile}_f{f_sorted[harmonic]/1e6:.2f}MHz"
+    
+                if os.path.isfile(f"{freqfile}.fem") and simParam.reuse_file:
+                    femm.opendocument(f"{freqfile}.fem")
+                else:
+                    # Adjust the current
+                    femm.opendocument(f"{rawFile}.fem")
+                    if simnum == 0:
+                        femm.mi_probdef(f_sorted[harmonic], 'millimeters', 'planar', 1.e-8, myind.depth_planar, 30)
+                        for idx in range(myind.turns):
+                            femm.mi_setcurrent(f'Al{idx+1}', amp1_sorted[harmonic])
+                            femm.mi_setcurrent(f'Ar{idx+1}', -amp1_sorted[harmonic])
+                            if not (myind.coupled == 0):
+                                femm.mi_setcurrent(f'Bl{idx+1}', amp2_sorted[harmonic])
+                                femm.mi_setcurrent(f'Br{idx+1}', -amp2_sorted[harmonic])
+                    elif simnum == 1:
+                        femm.mi_probdef(f_sorted[harmonic], 'millimeters', 'axi', 1.e-8, 0, 30)
+                        for idx in range(myind.turns):
+                            femm.mi_setcurrent(str(idx+1), amp1_sorted[harmonic])
+                    femm.mi_saveas(f"{freqfile}.fem")
+                    
+                if not os.path.isfile(f"{freqfile}.ans") or simParam.reuse_file == 0:
+                    femm.mi_analyze()
+                femm.mi_loadsolution()
+            
+                # Because the frequencies are sorted by amplitude, the
+                # first one isn't necessarily DC, so this variable
+                # indicates when a simulation is DC
+                isDC = 0
+                if simnum == 0:
+                    # Get Copperloss (lossA is identical to lossB)
+                    valsAl = np.zeros((myind.turns, 3), dtype=complex)
+                    valsAr = np.zeros((myind.turns, 3), dtype=complex)
+                    for idx in range(myind.turns):
+                        valsAl[idx, :] = femm.mo_getcircuitproperties(f'Al{idx+1}')
+                        valsAr[idx, :] = femm.mo_getcircuitproperties(f'Ar{idx+1}')
+                    # Calculate the loss differently for DC
+                    if np.imag(valsAl[0, 0]) == 0:
+                        isDC = 1
+                        loss_harmonic = (np.sum(valsAl[:, 1]) - np.sum(valsAr[:, 1])) * valsAl[0, 0]
+                    else:
+                        loss_harmonic = np.real(0.5 * (np.sum(valsAl[:, 1]) - np.sum(valsAr[:, 1])) * np.conj(valsAl[0, 0]))
+                    result[simnum].loss_copper_harmonic.append(loss_harmonic)
+                    # Add to total loss
+                    result[simnum].loss_copper = result[simnum].loss_copper + loss_harmonic
+                elif simnum == 1:
+                    # Get Copperloss
+                    vals = np.zeros((myind.turns, 3), dtype=complex)
+                    for idx in range(myind.turns):
+                        vals[idx, :] = femm.mo_getcircuitproperties(str(idx+1))
+                    # Calculate the loss differently for DC
+                    if np.imag(vals[0, 0]) == 0:
+                        isDC = 1
+                        loss_harmonic = np.sum(vals[:, 1]) * vals[0, 0]
+                    else:
+                        loss_harmonic = np.real(0.5 * np.sum(vals[:, 1]) * np.conj(vals[0, 0]))
+                    result[simnum].loss_copper_harmonic.append(loss_harmonic)
+                    # Add to total loss
+                    result[simnum].loss_copper = result[simnum].loss_copper + loss_harmonic
+            
+                # Get the flux-density from each area
+                # Only check the areas that have a name because for 
+                # symmetrical designs, not all areas need to be checked
+                vol = np.zeros(len(areaNames))
+                for i in range(len(areaNames)):
+                    femm.mo_selectblock(areaCenters[0, i], areaCenters[1, i])
+                    vol[i] = femm.mo_blockintegral(10)
+                    # Get the average flux densities
+                    bx = femm.mo_blockintegral(8) / vol[i]
+                    by = femm.mo_blockintegral(9) / vol[i]
+                    femm.mo_clearblock()
+            
+                    # Add the time-domain waveform of the current frequency
+                    # to the overall waveform (stored independently for each area)
+                    result[simnum].bx_waveform[i, :] = result[simnum].bx_waveform[i, :] + \
+                        np.real(bx) * np.cos(2 * np.pi * f_sorted[harmonic] * time_interpol) + \
+                        np.imag(bx) * np.sin(2 * np.pi * f_sorted[harmonic] * time_interpol)
+                    result[simnum].by_waveform[i, :] = result[simnum].by_waveform[i, :] + \
+                        np.real(by) * np.cos(2 * np.pi * f_sorted[harmonic] * time_interpol) + \
+                        np.imag(by) * np.sin(2 * np.pi * f_sorted[harmonic] * time_interpol)
+                    # Get Hdc
+                    if isDC:
+                        # Save dc_index for later
+                        dc_index = harmonic
+                        result[simnum].Hdc[i] = np.sqrt(bx**2 + by**2) / (simParam.mu0 * myind.material.mu)
+                        msg.print_msg(5, f"Hdc {areaNames[i]}: {result[simnum].Hdc[i]:.1f} A/m\n", simParam)
+                femm.closefemm()
+
+            # Multiply total copper loss by two for the two coils
+            result[simnum].loss_copper = result[simnum].loss_copper * 2
+            msg.print_msg(0, f"Copper Loss: {result[simnum].loss_copper:.1f} W\n", simParam)
+            # Calculate DC-resistance 
+            res_dc = result[simnum].loss_copper_harmonic[dc_index] / (simParam.iout_avg / 2)**2
+            # Compare the loss with the loss that would occur for a
+            # constant resistivity
+            loss_const = res_dc * (my_rms(time_array, current['i1'])**2 + my_rms(time_array, current['i2'])**2)
+            msg.print_msg(1, f"Increase in resisitivy: {100*(result[simnum].loss_copper/loss_const-1):.0f} % \n", simParam)
+    
+            # Compute the loss-density for each area using iGSE
+            result[simnum].loss_core = 0
+            msg.print_msg(3, "Loss densities [mW/cm^3]: \n", simParam)
+            for i in range(len(areaNames)):
+                # Calculate loss in x and y direction independently
+                result[simnum].bx_waveform[i, -1] = result[simnum].bx_waveform[i, 0]    # Somehow needed for the coreloss script to work
+                result[simnum].by_waveform[i, -1] = result[simnum].by_waveform[i, 0]    # Somehow needed for the coreloss script to work
+                # loss density in mW/cm^3 = kW/m^3
+                result[simnum].loss_core_area[i] = coreloss_sullivan(time_interpol, result[simnum].bx_waveform[i, :], myind.material, 1) + \
+                    coreloss_sullivan(time_interpol, result[simnum].by_waveform[i, :], myind.material, 1)
+                msg.print_msg(5, f"    {areaNames[i]}: {result[simnum].loss_core_area[i]:.0f} mW/cm^3\n", simParam)
+                # Total loss in W
+                result[simnum].loss_core = result[simnum].loss_core + result[simnum].loss_core_area[i] * vol[i] * 1e3
+                
+            # Export the results in a nice sorted table which is much easier to
+            # read than the normal print
+            myPtable = pd.DataFrame({
+                'Area': areaNames,
+                'Loss': result[simnum].loss_core_area[:len(areaNames)]
+            })
+            myPtable = myPtable.sort_values('Loss', ascending=False)
+            print(myPtable.set_index('Area').T)
+            
+            print("Hdc [A/m]: ")
+            myHtable = pd.DataFrame({
+                'Area': areaNames,
+                'Hdc': result[simnum].Hdc[:len(areaNames)]
+            })
+            myHtable = myHtable.sort_values('Hdc', ascending=False)
+            print(myHtable.set_index('Area').T)
+
+            # Multiply overall core loss depending on the amout of symmetry
+            if simnum == 0:
+                result[simnum].loss_core = result[simnum].loss_core * (np.sum(myind.symm) + 1)
+                if myind.coupled:
+                    result[simnum].loss_core = result[simnum].loss_core * 2
+            else:
+                # For axisymmetric simulation, only the y-direction matters
+                # *2 because only one core is simulated
+                result[simnum].loss_core = result[simnum].loss_core * 2 * (myind.symm[1] + 1)
+            msg.print_msg(0, f"Core Loss: {result[simnum].loss_core:.1f} W\n", simParam)
+    
+            # Total loss
+            result[simnum].loss_total = result[simnum].loss_core + result[simnum].loss_copper + result[simnum].conduction_loss
+            msg.print_msg(0, f"Total Loss: {result[simnum].loss_total:.2f}W\n", simParam)
+            msg.print_msg(0, f"Total Efficiency: {(1-result[simnum].loss_total/simParam.pout)*100:.2f} %\n", simParam)
+
+    # Save all the data
+    save_path = Path(simParam.datafolder) / f"{myind.description}.pkl"
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(save_path, 'wb') as f:
+        pickle.dump({
+            'myind': myind,
+            'result': result,
+            'simParam': simParam
+        }, f)
+
+    # Finish
+    elapsedTime = time.time() - start_time
+    msg.print_msg(0, f"\n\n--------------------Finished in {elapsedTime:.0f} s--------------------\n", simParam)
+
+    # Open FEMM again and show the flux-density of the fundamental
+    if simParam.SHOWDESIGN:
+        if simParam.SIMULATIONS[0]:
+            myind.show_design(result, 0, 1, 'mag', 50e-3)
+        else:
+            myind.show_design(result, 1, 1, 'mag', 50e-3)
+
+    # Delete the msg handle to close the logfile (might not be necessary but doesn't hurt)
+    del msg
