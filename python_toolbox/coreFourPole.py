@@ -16,9 +16,7 @@
 # If not, see https://www.gnu.org/licenses/gpl-3.0.html
 
 import numpy as np
-from getRectangle import getRectangle
-from mirrorRects import mirrorRects
-from moveRects import moveRects
+from helperFunctions import getRectangle, mirrorRects, moveRects
 
 def coreFourPole(myind, core, simParam):
     """Calculates rectangles for a four-pole core. 
@@ -38,7 +36,7 @@ def coreFourPole(myind, core, simParam):
     h_top_real = core['A_top'] / myind.dimension['depth']
     h_bot_real = core['A_bot'] / myind.dimension['depth']
     myind.dimension['width'] = 2 * (2 * (r_pillar + myind.winding['width'] + 2 * myind.pcb.spacing_hor) + w_side_real)
-    myind.dimension['height'] = h_top_real + h_bot_real + myind.pcb.thickness + core['PCB_Spacing_top'] + core['PCB_Spacing_bot']
+    myind.dimension['height'] = h_top_real + h_bot_real + myind.pcbhickness + core['PCB_Spacing_top'] + core['PCB_Spacing_bot']
 
     ## Calculate dimensions for planar simulation
     # Stretch the winding into a linear shape for simulation
@@ -52,12 +50,12 @@ def coreFourPole(myind, core, simParam):
     h_top_planar = core['A_top'] / myind.depth_planar
     h_bot_planar = core['A_bot'] / myind.depth_planar
     # Distance between top and bottom (i.e. height of the window)
-    h_window_planar = core['PCB_Spacing_top'] + core['PCB_Spacing_bot'] + myind.pcb.thickness
+    h_window_planar = core['PCB_Spacing_top'] + core['PCB_Spacing_bot'] + myind.pcbhickness
     # Width of the window
     w_window_planar = myind.winding['width'] + 2 * myind.pcb.spacing_hor
     # Specify where the winding should start
-    myind.winding['planar_start'] = np.array([[-w_pillar_planar/2 - myind.pcb.spacing_hor, -core['PCB_Spacing_top'] - myind.pcb.thickness/2],
-                                              [w_pillar_planar/2 + myind.pcb.spacing_hor, -core['PCB_Spacing_top'] - myind.pcb.thickness/2]]).T
+    myind.winding['planar_start'] = np.array([[-w_pillar_planar/2 - myind.pcb.spacing_hor, -core['PCB_Spacing_top'] - myind.pcbhickness/2],
+                                              [w_pillar_planar/2 + myind.pcb.spacing_hor, -core['PCB_Spacing_top'] - myind.pcbhickness/2]])
 
     ## Calculate dimensions for axisymmetric simulation
     # Calculate the total radius. We can use:
@@ -74,13 +72,13 @@ def coreFourPole(myind, core, simParam):
     h_top_axi = core['A_top'] / (2 * np.pi * r_pillar / 2)
     h_bot_axi = core['A_bot'] / (2 * np.pi * r_pillar / 2)
     # Specify where the winding should start
-    myind.winding['axi_start'] = np.array([r_pillar + myind.pcb.spacing_hor, -core['PCB_Spacing_top'] - myind.pcb.thickness/2])
+    myind.winding['axi_start'] = np.array([r_pillar + myind.pcb.spacing_hor, -core['PCB_Spacing_top'] - myind.pcbhickness/2])
 
     ## Specify where the "air"-property should be placed
     # For planar, place "air" above the core
-    myind.air_planar = np.array([0, (myind.pcb.thickness/2 + core['PCB_Spacing_top'] + h_top_planar) * 1.5])
+    myind.air_planar = np.array([0, (myind.pcbhickness/2 + core['PCB_Spacing_top'] + h_top_planar) * 1.5])
     # For axi, place air above the core
-    myind.air_axi = np.array([r_pillar/2, (myind.pcb.thickness/2 + core['PCB_Spacing_top'] + h_top_axi) * 1.5])
+    myind.air_axi = np.array([r_pillar/2, (myind.pcbhickness/2 + core['PCB_Spacing_top'] + h_top_axi) * 1.5])
 
     ## Calculate rectangles for planar simulation
     # The core is symmetric, so only one half needs to be drawn. Then it
@@ -90,86 +88,87 @@ def coreFourPole(myind, core, simParam):
     
     # Draw the right half of the right coil
     myind.names_planar = ["Bot_Pillar_Right", "Bot_Winding_Right", "Pillar_Right", "Top_Pillar_Right", "Top_Winding_Right"]
-    myind.rects_planar = np.array([[0, -h_window_planar - h_bot_planar], [w_pillar_planar/2, -h_window_planar]]).T
-    myind.rects_planar = np.dstack([myind.rects_planar,
-                                    np.array([[w_pillar_planar/2, -h_window_planar - h_bot_planar],
-                                             [w_pillar_planar/2 + w_window_planar, -h_window_planar]]).T])
+    myind.rects_planar = np.array([[[0, -h_window_planar - h_bot_planar], [w_pillar_planar/2, -h_window_planar]]])
+    myind.rects_planar = np.concatenate([myind.rects_planar,
+                                    np.array([[[w_pillar_planar/2, -h_window_planar - h_bot_planar],
+                                             [w_pillar_planar/2 + w_window_planar, -h_window_planar]]])], axis=0)
+    
     if core.get('centerPillar', False):
-        myind.rects_planar = np.dstack([myind.rects_planar,
-                                        np.array([[0, -h_window_planar + core['gap_pillar']/2],
-                                                 [w_pillar_planar/2, -core['gap_pillar']/2]]).T])
+        myind.rects_planar = np.concatenate([myind.rects_planar,
+                                        np.array([[[0, -h_window_planar + core['gap_pillar']/2],
+                                                 [w_pillar_planar/2, -core['gap_pillar']/2]]])], axis=0)
     else:
-        myind.rects_planar = np.dstack([myind.rects_planar,
-                                        np.array([[0, -h_window_planar],
-                                                 [w_pillar_planar/2, -core['gap_pillar']]]).T])
-    myind.rects_planar = np.dstack([myind.rects_planar,
-                                    np.array([[0, 0], [w_pillar_planar/2, h_top_planar]]).T])
-    myind.rects_planar = np.dstack([myind.rects_planar,
-                                    np.array([[w_pillar_planar/2, 0],
-                                             [w_pillar_planar/2 + w_window_planar, h_top_planar]]).T])
+        myind.rects_planar = np.concatenate([myind.rects_planar,
+                                        np.array([[[0, -h_window_planar],
+                                                 [w_pillar_planar/2, -core['gap_pillar']]]])], axis=0)
+    myind.rects_planar = np.concatenate([myind.rects_planar,
+                                    np.array([[[0, 0], [w_pillar_planar/2, h_top_planar]]])], axis=0)
+    myind.rects_planar = np.concatenate([myind.rects_planar,
+                                    np.array([[[w_pillar_planar/2, 0],
+                                             [w_pillar_planar/2 + w_window_planar, h_top_planar]]])], axis=0)
     # Mirror everything to the left
-    myind.rects_planar = np.dstack([myind.rects_planar, mirrorRects(myind.rects_planar, 'x')])
+    myind.rects_planar = np.concatenate([myind.rects_planar, mirrorRects(myind.rects_planar, 'x')], axis=0)
     myind.names_planar = myind.names_planar + ["Bot_Pillar_Left", "Bot_Winding_Left", "Pillar_Left", "Top_Pillar_Left", "Top_Winding_Left"]
     # Create the side (only on the right side):
     myind.names_planar = myind.names_planar + ["Side"]
-    myind.rects_planar = np.dstack([myind.rects_planar,
-                                    np.array([[w_pillar_planar/2 + w_window_planar, -h_window_planar],
-                                             [w_pillar_planar/2 + w_window_planar + w_side_planar, -core['gap_side']]]).T])
+    myind.rects_planar = np.concatenate([myind.rects_planar,
+                                    np.array([[[w_pillar_planar/2 + w_window_planar, -h_window_planar],
+                                             [w_pillar_planar/2 + w_window_planar + w_side_planar, -core['gap_side']]]])], axis=0)
     myind.names_planar = myind.names_planar + ["Top_Side"]
-    myind.rects_planar = np.dstack([myind.rects_planar,
-                                    np.array([[w_pillar_planar/2 + w_window_planar, 0],
-                                             [w_pillar_planar/2 + w_window_planar + w_side_planar, h_top_planar]]).T])
+    myind.rects_planar = np.concatenate([myind.rects_planar,
+                                    np.array([[[w_pillar_planar/2 + w_window_planar, 0],
+                                             [w_pillar_planar/2 + w_window_planar + w_side_planar, h_top_planar]]])], axis=0)
     myind.names_planar = myind.names_planar + ["Bot_Side"]
-    myind.rects_planar = np.dstack([myind.rects_planar,
-                                    np.array([[w_pillar_planar/2 + w_window_planar, -h_window_planar - h_bot_planar],
-                                             [w_pillar_planar/2 + w_window_planar + w_side_planar, -h_window_planar]]).T])
+    myind.rects_planar = np.concatenate([myind.rects_planar,
+                                    np.array([[[w_pillar_planar/2 + w_window_planar, -h_window_planar - h_bot_planar],
+                                             [w_pillar_planar/2 + w_window_planar + w_side_planar, -h_window_planar]]])], axis=0)
     # Move everything to the right
     # Get the minimum x-coordinate and move by that (xmin will be negative)
-    xmin = np.min(myind.rects_planar[0, :, :])
+    xmin = np.min(myind.rects_planar[:, :, 0])
     myind.rects_planar = moveRects(myind.rects_planar, -xmin, 0)
     # Move the starting x-coordinates
-    myind.winding['planar_start'][0, :] = myind.winding['planar_start'][0, :] - xmin
+    myind.winding['planar_start'][:, 0] = myind.winding['planar_start'][:, 0] - xmin
     # Mirror everything
-    myind.rects_planar = np.dstack([myind.rects_planar, mirrorRects(myind.rects_planar, 'x')])
+    myind.rects_planar = np.concatenate([myind.rects_planar, mirrorRects(myind.rects_planar, 'x')], axis=0)
     # Use mirrorRects to create the second starting coordinates even though
     # these are not rects
     # This needs to be done individually, because the order needs to be
     # flipped to stay l-r-l-r
-    temp_start = np.zeros((2, 4))
-    temp_start[:, 0:2] = myind.winding['planar_start']
-    temp_start[:, 2] = mirrorRects(myind.winding['planar_start'][:, 1:2], 'x').flatten()
-    temp_start[:, 3] = mirrorRects(myind.winding['planar_start'][:, 0:1], 'x').flatten()
+    temp_start = np.zeros((4, 2))
+    temp_start[0:2] = myind.winding['planar_start']
+    temp_start[2] = mirrorRects(myind.winding['planar_start'][1], 'x')
+    temp_start[3] = mirrorRects(myind.winding['planar_start'][0], 'x')
     myind.winding['planar_start'] = temp_start
 
     ## Calculate rectangles for axisymmetric simulation
     # Height and width of the window stay the same, so that can be reused from
     # planar simulation
     myind.names_axi = ["Bot_Pillar", "Bot_Winding", "Pillar", "Top_Pillar", "Top_Winding", "Side", "Top_Side", "Bot_Side"]
-    myind.rects_axi = np.array([[0, -h_window_planar - h_bot_axi], [r_pillar, -h_window_planar]]).T
-    myind.rects_axi = np.dstack([myind.rects_axi,
-                                np.array([[r_pillar, -h_window_planar - h_bot_axi],
-                                         [r_pillar + w_window_planar, -h_window_planar]]).T])
+    myind.rects_axi = np.array([[[0, -h_window_planar - h_bot_axi], [r_pillar, -h_window_planar]]])
+    myind.rects_axi = np.concatenate([myind.rects_axi,
+                                np.array([[[r_pillar, -h_window_planar - h_bot_axi],
+                                         [r_pillar + w_window_planar, -h_window_planar]]])], axis=0)
     if 'centerPillar' in core and core['centerPillar']:
-        myind.rects_axi = np.dstack([myind.rects_axi,
-                                    np.array([[0, -h_window_planar + core['gap_pillar']/2],
-                                             [r_pillar, -core['gap_pillar']/2]]).T])
+        myind.rects_axi = np.concatenate([myind.rects_axi,
+                                    np.array([[[0, -h_window_planar + core['gap_pillar']/2],
+                                             [r_pillar, -core['gap_pillar']/2]]])], axis=0)
     else:
-        myind.rects_axi = np.dstack([myind.rects_axi,
-                                    np.array([[0, -h_window_planar],
-                                             [r_pillar, -core['gap_pillar']]]).T])
-    myind.rects_axi = np.dstack([myind.rects_axi,
-                                np.array([[0, 0], [r_pillar, h_top_axi]]).T])
-    myind.rects_axi = np.dstack([myind.rects_axi,
-                                np.array([[r_pillar, 0],
-                                         [r_pillar + w_window_planar, h_top_axi]]).T])
-    myind.rects_axi = np.dstack([myind.rects_axi,
-                                np.array([[r_pillar + w_window_planar, -h_window_planar],
-                                         [r_total_axi, -core['gap_side']]]).T])
-    myind.rects_axi = np.dstack([myind.rects_axi,
-                                np.array([[r_pillar + w_window_planar, 0],
-                                         [r_total_axi, h_top_axi]]).T])
-    myind.rects_axi = np.dstack([myind.rects_axi,
-                                np.array([[r_pillar + w_window_planar, -h_window_planar - h_bot_axi],
-                                         [r_total_axi, -h_window_planar]]).T])
+        myind.rects_axi = np.concatenate([myind.rects_axi,
+                                    np.array([[[0, -h_window_planar],
+                                             [r_pillar, -core['gap_pillar']]]])], axis=0)
+    myind.rects_axi = np.concatenate([myind.rects_axi,
+                                np.array([[[0, 0], [r_pillar, h_top_axi]]])], axis=0)
+    myind.rects_axi = np.concatenate([myind.rects_axi,
+                                np.array([[[r_pillar, 0],
+                                         [r_pillar + w_window_planar, h_top_axi]]])], axis=0)
+    myind.rects_axi = np.concatenate([myind.rects_axi,
+                                np.array([[[r_pillar + w_window_planar, -h_window_planar],
+                                         [r_total_axi, -core['gap_side']]]])], axis=0)
+    myind.rects_axi = np.concatenate([myind.rects_axi,
+                                np.array([[[r_pillar + w_window_planar, 0],
+                                         [r_total_axi, h_top_axi]]])], axis=0)
+    myind.rects_axi = np.concatenate([myind.rects_axi,
+                                np.array([[[r_pillar + w_window_planar, -h_window_planar - h_bot_axi],
+                                         [r_total_axi, -h_window_planar]]])], axis=0)
     
     return myind

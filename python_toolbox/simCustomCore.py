@@ -28,16 +28,12 @@ from simulationParameters import SimulationParameters
 from designs import designs
 from Message import Message
 from Result import Result
-from drawPlanarInductor import draw_planar_inductor
-from drawAxisymmetricInductor import draw_axisymmetric_inductor
-from getInductancePlanar import get_inductance_planar
-from getInductanceAxi import get_inductance_axi
-from getWaveformMath import get_waveform_math
-from calcCapacitance import calc_capacitance
-from myrms import my_rms
-from getSpectrum import get_spectrum
-from sortData import sort_data
-from corelossSullivan import coreloss_sullivan
+from drawPlanarInductor import drawPlanarInductor
+from drawAxisymmetricInductor import drawAxisymmetricInductor
+from getInductancePlanar import getInductancePlanar
+from getInductanceAxi import getInductanceAxi
+from helperFunctions import getWaveformMath, calcCapacitance, myrms, getSpectrum, sortData
+from corelossSullivan import corelossSullivan
 
 # Specify which windings should be simulated
 simDesign = [4]
@@ -73,12 +69,12 @@ for simCounter in range(len(simDesign)):
     if simParam.SIMULATIONS[0] == 1 or not (myind.coupled == 0):
         # Prepare a result object
         result[0] = Result()
-        draw_planar_inductor(myind, simParam)
-        result[0] = get_inductance_planar(myind, result[0], msg, simParam)
+        drawPlanarInductor(myind, simParam)
+        result[0] = getInductancePlanar(myind, result[0], msg, simParam)
 
     ## Draw the axisymmetric inductor if the user wants to do an axisymmetric simulation
     if simParam.SIMULATIONS[1] == 1:
-        draw_axisymmetric_inductor(myind, simParam)
+        drawAxisymmetricInductor(myind, simParam)
         # Reuse the contents of result[0] and only modify L_self
         # The reason is, that the other parameters cannot be determined
         # from axisymmetric simulation for coupled inductors
@@ -90,7 +86,7 @@ for simCounter in range(len(simDesign)):
             result[1] = Result()
             result[1].k = 0
             result[1].L_coupled = 0
-        result[1] = get_inductance_axi(myind, result[1], msg, simParam)
+        result[1] = getInductanceAxi(myind, result[1], msg, simParam)
 
     ## Main simulation loop
     for simnum in range(2):  # 0 for planar, 1 for axi
@@ -115,7 +111,7 @@ for simCounter in range(len(simDesign)):
             msg.print_msg(2, f"fs = {result[simnum].fs*1e-6:.2f} MHz\n", simParam)
         
             ## Get the waveform
-            current, time_array = get_waveform_math(simParam, result[simnum].fs, result[simnum])
+            current, time_array = getWaveformMath(simParam, result[simnum].fs, result[simnum])
             if simParam.SHOWPLOTS:
                 import matplotlib.pyplot as plt
                 plt.figure()
@@ -130,25 +126,25 @@ for simCounter in range(len(simDesign)):
         
             ## Calculate required input and output capacitance
             if simParam.CALC_CAP:
-                result[simnum] = calc_capacitance(time_array, current, result[simnum], simParam)
+                result[simnum] = calcCapacitance(time_array, current, result[simnum], simParam)
                 msg.print_msg(2, f"Required input capacitance: {result[simnum].Cin*1e6:.1f} uF\n", simParam)
                 msg.print_msg(2, f"Required output capacitance: {result[simnum].Cout*1e6:.1f} uF\n", simParam)
         
             ## MOSFET conduction-loss
-            result[simnum].conduction_loss = simParam.Rds_on * my_rms(time_array, current['i1'])**2 * 2    # *2 because of two legs
+            result[simnum].conduction_loss = simParam.Rds_on * myrms(time_array, current['i1'])**2 * 2    # *2 because of two legs
             msg.print_msg(1, f"Transistor conduction loss: {result[simnum].conduction_loss:.1f}W\n", simParam)
     
             ## Perform an FFT of the current and analyze the largest harmonics
             # Get Spectrum of the current
-            amplitude_1, f = get_spectrum(current['i1'], time_array, 100)
-            amplitude_2, _ = get_spectrum(current['i2'], time_array, 100)
+            amplitude_1, f = getSpectrum(current['i1'], time_array, 100)
+            amplitude_2, _ = getSpectrum(current['i2'], time_array, 100)
         
             # Sort spectrum by amplitude
             # Currents are identical, just phase-shifted so they contain the same
-            # absolute frequency components. Therefore both calls to sort_data return
+            # absolute frequency components. Therefore both calls to sortData return
             # the same order of frequencies.
-            amp1_sorted, f_sorted = sort_data(amplitude_1, f)
-            amp2_sorted, _ = sort_data(amplitude_2, f)
+            amp1_sorted, f_sorted = sortData(amplitude_1, f)
+            amp2_sorted, _ = sortData(amplitude_2, f)
         
             # Initialize some variables depending on which simulation is
             # currently running
@@ -278,7 +274,7 @@ for simCounter in range(len(simDesign)):
             res_dc = result[simnum].loss_copper_harmonic[dc_index] / (simParam.iout_avg / 2)**2
             # Compare the loss with the loss that would occur for a
             # constant resistivity
-            loss_const = res_dc * (my_rms(time_array, current['i1'])**2 + my_rms(time_array, current['i2'])**2)
+            loss_const = res_dc * (myrms(time_array, current['i1'])**2 + myrms(time_array, current['i2'])**2)
             msg.print_msg(1, f"Increase in resisitivy: {100*(result[simnum].loss_copper/loss_const-1):.0f} % \n", simParam)
     
             # Compute the loss-density for each area using iGSE
@@ -289,8 +285,8 @@ for simCounter in range(len(simDesign)):
                 result[simnum].bx_waveform[i, -1] = result[simnum].bx_waveform[i, 0]    # Somehow needed for the coreloss script to work
                 result[simnum].by_waveform[i, -1] = result[simnum].by_waveform[i, 0]    # Somehow needed for the coreloss script to work
                 # loss density in mW/cm^3 = kW/m^3
-                result[simnum].loss_core_area[i] = coreloss_sullivan(time_interpol, result[simnum].bx_waveform[i, :], myind.material, 1) + \
-                    coreloss_sullivan(time_interpol, result[simnum].by_waveform[i, :], myind.material, 1)
+                result[simnum].loss_core_area[i] = corelossSullivan(time_interpol, result[simnum].bx_waveform[i, :], myind.material, 1) + \
+                    corelossSullivan(time_interpol, result[simnum].by_waveform[i, :], myind.material, 1)
                 msg.print_msg(5, f"    {areaNames[i]}: {result[simnum].loss_core_area[i]:.0f} mW/cm^3\n", simParam)
                 # Total loss in W
                 result[simnum].loss_core = result[simnum].loss_core + result[simnum].loss_core_area[i] * vol[i] * 1e3

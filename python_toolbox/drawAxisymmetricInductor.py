@@ -62,9 +62,9 @@ def drawAxisymmetricInductor(myind, simParam):
             femm.mi_addcircprop(str(i), simParam.iout_avg / 2, 0)
 
         ## Draw the core and add block labels
-        for i in range(myind.rects_axi.shape[2]):
-            femm.mi_drawrectangle(myind.rects_axi[0, 0, i], myind.rects_axi[1, 0, i],
-                                myind.rects_axi[0, 1, i], myind.rects_axi[1, 1, i])
+        for i in range(myind.rects_axi.shape[0]):
+            femm.mi_drawrectangle(myind.rects_axi[i, 0, 0], myind.rects_axi[i, 0, 1],
+                                myind.rects_axi[i, 1, 0], myind.rects_axi[i, 1, 1])
             femm.mi_addblocklabel(myind.centers_axi[0, i], myind.centers_axi[1, i])
             femm.mi_selectlabel(myind.centers_axi[0, i], myind.centers_axi[1, i])
             femm.mi_setblockprop('Core', simParam.CORE_AUTOMESH, simParam.CORE_MESHSIZE, '<None>', 0, 0, 0)
@@ -82,7 +82,7 @@ def drawAxisymmetricInductor(myind, simParam):
         
         # Make the Dirichlet Boundary at the end because for some reason this
         # speeds up the process a lot. Automatically zooms to natural at the end.
-        femm.mi_makeABC(3, np.max(np.abs(myind.rects_axi[0, :, :])) * 2, 0, 0, 0)
+        femm.mi_makeABC(3, np.max(np.abs(myind.rects_axi[:, :, 0])) * 2, 0, 0, 0)
         
         # Save the file
         femm.mi_saveas(f"{myind.filename_axi}.fem")

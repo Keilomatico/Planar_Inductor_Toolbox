@@ -16,8 +16,7 @@
 # If not, see https://www.gnu.org/licenses/gpl-3.0.html
 
 import numpy as np
-from getRectangle import getRectangle
-from mirrorRects import mirrorRects
+from helperFunctions import getRectangle, mirrorRects
 
 def coreSingleInductor(myind, core, simParam):
     """Calculates the rectangles of an inductor which is symmetric 
@@ -85,29 +84,29 @@ def coreSingleInductor(myind, core, simParam):
     # if a more precise Hdc and core-loss is desired.
     myind.names_planar = ["Center", "OverWinding", "Outer"]
     myind.rects_planar = getRectangle(0, myind.pcb.thickness/2 + core['PCB_Spacing'],
-                                      w_center, h_top_planar)
-    myind.rects_planar = np.dstack([myind.rects_planar,
+                                      w_center, h_top_planar)[np.newaxis, :, :]
+    myind.rects_planar = np.concatenate([myind.rects_planar,
                                     getRectangle(w_center, myind.pcb.thickness/2 + core['PCB_Spacing'],
-                                                myind.winding['width'] + myind.pcb.spacing_hor, h_top_planar)])
-    myind.rects_planar = np.dstack([myind.rects_planar,
+                                                myind.winding['width'] + myind.pcb.spacing_hor, h_top_planar)[np.newaxis, :, :]], axis=0)
+    myind.rects_planar = np.concatenate([myind.rects_planar,
                                     getRectangle(w_center + myind.winding['width'] + myind.pcb.spacing_hor, 0,
-                                                w_side_planar, myind.pcb.thickness/2 + core['PCB_Spacing'] + h_top_planar)])
+                                                w_side_planar, myind.pcb.thickness/2 + core['PCB_Spacing'] + h_top_planar)[np.newaxis, :, :]], axis=0)
 
     myind.names_axi = myind.names_planar
     myind.rects_axi = getRectangle(0, myind.pcb.thickness/2 + core['PCB_Spacing'],
-                                   r_windingInner, h_top_axi)
-    myind.rects_axi = np.dstack([myind.rects_axi,
+                                   r_windingInner, h_top_axi)[np.newaxis, :, :]
+    myind.rects_axi = np.concatenate([myind.rects_axi,
                                 getRectangle(r_windingInner, myind.pcb.thickness/2 + core['PCB_Spacing'],
-                                            myind.winding['width'] + myind.pcb.spacing_hor, h_top_axi)])
-    myind.rects_axi = np.dstack([myind.rects_axi,
+                                            myind.winding['width'] + myind.pcb.spacing_hor, h_top_axi)[np.newaxis, :, :]], axis=0)
+    myind.rects_axi = np.concatenate([myind.rects_axi,
                                 getRectangle(r_windingInner + myind.winding['width'] + myind.pcb.spacing_hor, 0,
-                                            w_side_axi, myind.pcb.thickness/2 + core['PCB_Spacing'] + h_top_axi)])
+                                            w_side_axi, myind.pcb.thickness/2 + core['PCB_Spacing'] + h_top_axi)[np.newaxis, :, :]], axis=0)
 
     ## Mirror the rectangles to create a full design
     # Planar: Mirror to the left and down
-    myind.rects_planar = np.dstack([myind.rects_planar, mirrorRects(myind.rects_planar, 'x')])
-    myind.rects_planar = np.dstack([myind.rects_planar, mirrorRects(myind.rects_planar, 'y')])
+    myind.rects_planar = np.concatenate([myind.rects_planar, mirrorRects(myind.rects_planar, 'x')], axis=0)
+    myind.rects_planar = np.concatenate([myind.rects_planar, mirrorRects(myind.rects_planar, 'y')], axis=0)
     # Axi: Only mirror down
-    myind.rects_axi = np.dstack([myind.rects_axi, mirrorRects(myind.rects_axi, 'y')])
+    myind.rects_axi = np.concatenate([myind.rects_axi, mirrorRects(myind.rects_axi, 'y')], axis=0)
     
     return myind

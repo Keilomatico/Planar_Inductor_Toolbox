@@ -68,9 +68,9 @@ def drawPlanarInductor(myind, simParam):
             femm.mi_addcircprop(f'Br{i}', 0.0001, 0)
 
         ## Draw the core and add block labels
-        for i in range(myind.rects_planar.shape[2]):
-            femm.mi_drawrectangle(myind.rects_planar[0, 0, i], myind.rects_planar[1, 0, i],
-                                myind.rects_planar[0, 1, i], myind.rects_planar[1, 1, i])
+        for i in range(myind.rects_planar.shape[0]):
+            femm.mi_drawrectangle(myind.rects_planar[i, 0, 0], myind.rects_planar[i, 0, 1],
+                                myind.rects_planar[i, 1, 0], myind.rects_planar[i, 1, 1])
             femm.mi_addblocklabel(myind.centers_planar[0, i], myind.centers_planar[1, i])
             femm.mi_selectlabel(myind.centers_planar[0, i], myind.centers_planar[1, i])
             femm.mi_setblockprop('Core', simParam.CORE_AUTOMESH, simParam.CORE_MESHSIZE, '<None>', 0, 0, 0)
@@ -95,7 +95,7 @@ def drawPlanarInductor(myind, simParam):
 
         # Make the Dirichlet Boundary at the end because for some reason this
         # speeds up the process a lot. Automatically zooms to natural at the end.
-        femm.mi_makeABC(3, np.max(np.abs(myind.rects_planar[0, :, :])) * 2, 0, 0, 0)
+        femm.mi_makeABC(3, np.max(np.abs(myind.rects_planar[:, :, 0])) * 2, 0, 0, 0)
         
         # Save the file
         femm.mi_saveas(f"{myind.filename_planar}.fem")
