@@ -24,7 +24,7 @@ def drawAxisymmetricInductor(myind, simParam):
     # result in myind.filename_axi+'.fem'
 
     if not (os.path.isfile(f"{myind.filename_axi}.fem") and simParam.reuse_file):
-        femm.openfemm()
+        femm.openfemm(simParam.HIDE_FEMM)
         if simParam.MINIMIZE_FEMM:
             femm.main_minimize()
         femm.newdocument(0)

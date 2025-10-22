@@ -40,6 +40,8 @@ class SimulationParameters:
         self.COPPER_MESHSIZE = 0.05
         # Minimize the FEMM windows
         self.MINIMIZE_FEMM = 0
+        # Hide the FEMM window (0 = show, 1 = hide)
+        self.HIDE_FEMM = 1
 
         # In order to calculate the depth for the planar simulation, the
         # round coild needs to be streched into a linear shape.
@@ -65,7 +67,7 @@ class SimulationParameters:
         self.SHOWDESIGN_SIMULATION = 0
     
         # Max. number of harmonics to analyze
-        self.NUM_HARMONICS = 2
+        self.NUM_HARMONICS = 4
         # If amplitude of a harmonic is smaller than HARMONIC_FACTOR*amp_fundamental: Ignore
         self.HARMONIC_FACTOR = 0.1
 

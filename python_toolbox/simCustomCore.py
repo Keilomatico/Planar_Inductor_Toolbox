@@ -178,7 +178,7 @@ for simCounter in range(len(simDesign)):
                     break
 
                 # Create/open a simulation file for the current frequency
-                femm.openfemm()
+                femm.openfemm(simParam.HIDE_FEMM)
                 if simParam.MINIMIZE_FEMM:
                     femm.main_minimize()
                 freqfile = f"{rawFile}_f{f_sorted[harmonic]/1e6:.2f}MHz"
@@ -337,9 +337,9 @@ for simCounter in range(len(simDesign)):
             if not simParam.SIMULATIONS[sim_to_show]:
                 print("Warning: No simulation available to show")
             else:
-                myind.showDesign(result, sim_to_show, 1, 'mag', 50e-3)
+                myind.showDesign(result, sim_to_show, 1, 'mag', 50e-3, simParam)
         else:
-            myind.showDesign(result, sim_to_show, 1, 'mag', 50e-3)
+            myind.showDesign(result, sim_to_show, 1, 'mag', 50e-3, simParam)
 
     # Delete the msg handle to close the logfile (might not be necessary but doesn't hurt)
     del msg

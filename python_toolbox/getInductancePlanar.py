@@ -22,7 +22,7 @@ import numpy as np
 def getInductancePlanar(myind, res, msg, simParam):
     # Determines the inductance for myind using a planar FEMM simulation
         
-    femm.openfemm()
+    femm.openfemm(simParam.HIDE_FEMM)
     if simParam.MINIMIZE_FEMM:
         femm.main_minimize()
     femm.opendocument(f"{myind.filename_planar}.fem")

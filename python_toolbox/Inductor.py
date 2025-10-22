@@ -143,8 +143,8 @@ class Inductor:
     # type: Type of the plot. Valid options are directly from
     # mo_showdensityplot. Common: 'mag' for B, 'jmag' for J, hmag for H
     # max: Upper limit of the scale
-    def showDesign(self, result, sim, harmonic, type, maxScale):
-        femm.openfemm()
+    def showDesign(self, result, sim, harmonic, type, maxScale, simParam):
+        femm.openfemm(simParam.HIDE_FEMM)
         if sim == 0:
             freqfile = f"{self.filename_planar}_f{result[0].fs/1e6*harmonic:.2f}MHz"
             rects = self.rects_planar

@@ -22,7 +22,7 @@ import numpy as np
 def getInductanceAxi(myind, res, msg, simParam):
     # Determines the inductance for myind using an axisymmetric FEMM simulation
         
-    femm.openfemm()
+    femm.openfemm(simParam.HIDE_FEMM)
     if simParam.MINIMIZE_FEMM:
         femm.main_minimize()
     femm.opendocument(f"{myind.filename_axi}.fem")
