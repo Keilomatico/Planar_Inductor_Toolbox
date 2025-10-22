@@ -25,7 +25,7 @@ def sortData(data, index):
     myarray = np.column_stack([np.abs(data), index, data])
     mytable = pd.DataFrame(myarray)
     mytable = mytable.sort_values(0, ascending=False)
-    index = mytable.iloc[:, 1].values
+    index = np.real(mytable.iloc[:, 1].values)
     data = mytable.iloc[:, 2].values
     return data, index
 
@@ -98,7 +98,11 @@ def myintegral(time, ydata):
     init = 0
     for i in range(len(time) - 1):
         while j < len(x) and x[j] <= time[i + 1]:
-            y[j] = init + (x[j] - time[i]) * (ydata[i + 1] - ydata[i]) / (time[i + 1] - time[i])
+            if time[i + 1] - time[i] == 0:
+                y[j] = 0
+            else:
+                y[j] = (0.5 * (ydata[i + 1] - ydata[i]) / (time[i + 1] - time[i]) * (x[j] - time[i])**2 + 
+                        ydata[i] * (x[j] - time[i]) + init)
             j += 1
         init = y[j - 1]
     

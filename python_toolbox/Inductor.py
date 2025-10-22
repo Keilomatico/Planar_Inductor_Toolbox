@@ -145,7 +145,7 @@ class Inductor:
     # max: Upper limit of the scale
     def showDesign(self, result, sim, harmonic, type, maxScale):
         femm.openfemm()
-        if sim == 1:
+        if sim == 0:
             freqfile = f"{self.filename_planar}_f{result[0].fs/1e6*harmonic:.2f}MHz"
             rects = self.rects_planar
         else:

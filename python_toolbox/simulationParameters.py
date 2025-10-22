@@ -58,12 +58,14 @@ class SimulationParameters:
         # Calculate the required capacitance
         self.CALC_CAP = True
         # Show plots
-        self.SHOWPLOTS = 0
+        self.SHOWPLOTS = 1
         # Show the design in the end
         self.SHOWDESIGN = 1
+        # Which simulation to show: 0 = planar, 1 = axisymmetric
+        self.SHOWDESIGN_SIMULATION = 0
     
         # Max. number of harmonics to analyze
-        self.NUM_HARMONICS = 4
+        self.NUM_HARMONICS = 2
         # If amplitude of a harmonic is smaller than HARMONIC_FACTOR*amp_fundamental: Ignore
         self.HARMONIC_FACTOR = 0.1
 

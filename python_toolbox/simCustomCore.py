@@ -70,13 +70,13 @@ for simCounter in range(len(simDesign)):
         # Prepare a result object
         result[0] = Result()
         drawPlanarInductor(myind, simParam)
-        msg.print_msg(3, f"Saved to: {myind.filename_planar}.fem\n", simParam)
+        msg.print_msg(5, f"Saved to: {myind.filename_planar}.fem\n", simParam)
         result[0] = getInductancePlanar(myind, result[0], msg, simParam)
 
     ## Draw the axisymmetric inductor if the user wants to do an axisymmetric simulation
     if simParam.SIMULATIONS[1] == 1:
         drawAxisymmetricInductor(myind, simParam)
-        msg.print_msg(3, f"Saved to: {myind.filename_axi}.fem\n", simParam)
+        msg.print_msg(5, f"Saved to: {myind.filename_axi}.fem\n", simParam)
         # Reuse the contents of result[0] and only modify L_self
         # The reason is, that the other parameters cannot be determined
         # from axisymmetric simulation for coupled inductors
@@ -105,11 +105,11 @@ for simCounter in range(len(simDesign)):
         
             # Calculate the switching frequency to achieve the negative current
             if simParam.D < 0.5:
-                result[simnum].fs = simParam.Vin * simParam.D / (2 * result[simnum].L_self * leg_ripple) * \
-                    (2 / (1 + result[simnum].k) * (0.5 - simParam.D) + 1 / (1 - result[simnum].k))
+                result[simnum].fs = float(simParam.Vin * simParam.D / (2 * result[simnum].L_self * leg_ripple) * \
+                    (2 / (1 + result[simnum].k) * (0.5 - simParam.D) + 1 / (1 - result[simnum].k)))
             else:
-                result[simnum].fs = simParam.Vin * simParam.Ts * (1 - simParam.D) / (2 * result[simnum].L_self * leg_ripple) * \
-                    (2 / (1 + result[simnum].k) * (simParam.D - 0.5) + 1 / (1 - result[simnum].k))
+                result[simnum].fs = float(simParam.Vin * simParam.Ts * (1 - simParam.D) / (2 * result[simnum].L_self * leg_ripple) * \
+                    (2 / (1 + result[simnum].k) * (simParam.D - 0.5) + 1 / (1 - result[simnum].k)))
             msg.print_msg(2, f"fs = {result[simnum].fs*1e-6:.2f} MHz\n", simParam)
         
             ## Get the waveform
@@ -220,9 +220,9 @@ for simCounter in range(len(simDesign)):
                     # Calculate the loss differently for DC
                     if np.imag(valsAl[0, 0]) == 0:
                         isDC = 1
-                        loss_harmonic = (np.sum(valsAl[:, 1]) - np.sum(valsAr[:, 1])) * valsAl[0, 0]
+                        loss_harmonic = float(np.real((np.sum(valsAl[:, 1]) - np.sum(valsAr[:, 1])) * valsAl[0, 0]))
                     else:
-                        loss_harmonic = np.real(0.5 * (np.sum(valsAl[:, 1]) - np.sum(valsAr[:, 1])) * np.conj(valsAl[0, 0]))
+                        loss_harmonic = float(np.real(0.5 * (np.sum(valsAl[:, 1]) - np.sum(valsAr[:, 1])) * np.conj(valsAl[0, 0])))
                     result[simnum].loss_copper_harmonic.append(loss_harmonic)
                     # Add to total loss
                     result[simnum].loss_copper = result[simnum].loss_copper + loss_harmonic
@@ -234,9 +234,9 @@ for simCounter in range(len(simDesign)):
                     # Calculate the loss differently for DC
                     if np.imag(vals[0, 0]) == 0:
                         isDC = 1
-                        loss_harmonic = np.sum(vals[:, 1]) * vals[0, 0]
+                        loss_harmonic = float(np.real(np.sum(vals[:, 1]) * vals[0, 0]))
                     else:
-                        loss_harmonic = np.real(0.5 * np.sum(vals[:, 1]) * np.conj(vals[0, 0]))
+                        loss_harmonic = float(np.real(0.5 * np.sum(vals[:, 1]) * np.conj(vals[0, 0])))
                     result[simnum].loss_copper_harmonic.append(loss_harmonic)
                     # Add to total loss
                     result[simnum].loss_copper = result[simnum].loss_copper + loss_harmonic
@@ -247,7 +247,7 @@ for simCounter in range(len(simDesign)):
                 vol = np.zeros(len(areaNames))
                 for i in range(len(areaNames)):
                     femm.mo_selectblock(areaCenters[0, i], areaCenters[1, i])
-                    vol[i] = femm.mo_blockintegral(10)
+                    vol[i] = float(np.real(femm.mo_blockintegral(10)))
                     # Get the average flux densities
                     bx = femm.mo_blockintegral(8) / vol[i]
                     by = femm.mo_blockintegral(9) / vol[i]
@@ -255,22 +255,22 @@ for simCounter in range(len(simDesign)):
             
                     # Add the time-domain waveform of the current frequency
                     # to the overall waveform (stored independently for each area)
-                    result[simnum].bx_waveform[i, :] = result[simnum].bx_waveform[i, :] + \
-                        np.real(bx) * np.cos(2 * np.pi * f_sorted[harmonic] * time_interpol) + \
-                        np.imag(bx) * np.sin(2 * np.pi * f_sorted[harmonic] * time_interpol)
-                    result[simnum].by_waveform[i, :] = result[simnum].by_waveform[i, :] + \
-                        np.real(by) * np.cos(2 * np.pi * f_sorted[harmonic] * time_interpol) + \
-                        np.imag(by) * np.sin(2 * np.pi * f_sorted[harmonic] * time_interpol)
+                    result[simnum].bx_waveform[i, :] = np.real(result[simnum].bx_waveform[i, :] + 
+                        bx.real * np.cos(2 * np.pi * f_sorted[harmonic] * time_interpol) + 
+                        bx.imag * np.sin(2 * np.pi * f_sorted[harmonic] * time_interpol))
+                    result[simnum].by_waveform[i, :] = np.real(result[simnum].by_waveform[i, :] + 
+                        by.real * np.cos(2 * np.pi * f_sorted[harmonic] * time_interpol) + 
+                        by.imag * np.sin(2 * np.pi * f_sorted[harmonic] * time_interpol))
                     # Get Hdc
                     if isDC:
                         # Save dc_index for later
                         dc_index = harmonic
-                        result[simnum].Hdc[i] = np.sqrt(bx**2 + by**2) / (simParam.mu0 * myind.material.mu)
+                        result[simnum].Hdc[i] = float(np.real(np.sqrt(bx**2 + by**2) / (simParam.mu0 * myind.material.mu)))
                         msg.print_msg(5, f"Hdc {areaNames[i]}: {result[simnum].Hdc[i]:.1f} A/m\n", simParam)
                 femm.closefemm()
 
             # Multiply total copper loss by two for the two coils
-            result[simnum].loss_copper = result[simnum].loss_copper * 2
+            result[simnum].loss_copper = float(np.real(result[simnum].loss_copper * 2))
             msg.print_msg(0, f"Copper Loss: {result[simnum].loss_copper:.1f} W\n", simParam)
             # Calculate DC-resistance 
             res_dc = result[simnum].loss_copper_harmonic[dc_index] / (simParam.iout_avg / 2)**2
@@ -319,10 +319,11 @@ for simCounter in range(len(simDesign)):
                 # For axisymmetric simulation, only the y-direction matters
                 # *2 because only one core is simulated
                 result[simnum].loss_core = result[simnum].loss_core * 2 * (myind.symm[1] + 1)
+            result[simnum].loss_core = float(np.real(result[simnum].loss_core))
             msg.print_msg(0, f"Core Loss: {result[simnum].loss_core:.1f} W\n", simParam)
     
             # Total loss
-            result[simnum].loss_total = result[simnum].loss_core + result[simnum].loss_copper + result[simnum].conduction_loss
+            result[simnum].loss_total = float(np.real(result[simnum].loss_core + result[simnum].loss_copper + result[simnum].conduction_loss))
             msg.print_msg(0, f"Total Loss: {result[simnum].loss_total:.2f}W\n", simParam)
             msg.print_msg(0, f"Total Efficiency: {(1-result[simnum].loss_total/simParam.pout)*100:.2f} %\n", simParam)
 
@@ -342,10 +343,17 @@ for simCounter in range(len(simDesign)):
 
     # Open FEMM again and show the flux-density of the fundamental
     if simParam.SHOWDESIGN:
-        if simParam.SIMULATIONS[0]:
-            myind.show_design(result, 0, 1, 'mag', 50e-3)
+        sim_to_show = simParam.SHOWDESIGN_SIMULATION
+        # Check if the requested simulation was actually run
+        if not simParam.SIMULATIONS[sim_to_show]:
+            # If the requested simulation wasn't run, try the other one
+            sim_to_show = 1 - sim_to_show
+            if not simParam.SIMULATIONS[sim_to_show]:
+                print("Warning: No simulation available to show")
+            else:
+                myind.showDesign(result, sim_to_show, 1, 'mag', 50e-3)
         else:
-            myind.show_design(result, 1, 1, 'mag', 50e-3)
+            myind.showDesign(result, sim_to_show, 1, 'mag', 50e-3)
 
     # Delete the msg handle to close the logfile (might not be necessary but doesn't hurt)
     del msg
