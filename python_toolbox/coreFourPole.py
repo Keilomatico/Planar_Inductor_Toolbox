@@ -36,7 +36,7 @@ def coreFourPole(myind, core, simParam):
     h_top_real = core['A_top'] / myind.dimension['depth']
     h_bot_real = core['A_bot'] / myind.dimension['depth']
     myind.dimension['width'] = 2 * (2 * (r_pillar + myind.winding['width'] + 2 * myind.pcb.spacing_hor) + w_side_real)
-    myind.dimension['height'] = h_top_real + h_bot_real + myind.pcbhickness + core['PCB_Spacing_top'] + core['PCB_Spacing_bot']
+    myind.dimension['height'] = h_top_real + h_bot_real + myind.pcb.thickness + core['PCB_Spacing_top'] + core['PCB_Spacing_bot']
 
     ## Calculate dimensions for planar simulation
     # Stretch the winding into a linear shape for simulation
@@ -50,12 +50,12 @@ def coreFourPole(myind, core, simParam):
     h_top_planar = core['A_top'] / myind.depth_planar
     h_bot_planar = core['A_bot'] / myind.depth_planar
     # Distance between top and bottom (i.e. height of the window)
-    h_window_planar = core['PCB_Spacing_top'] + core['PCB_Spacing_bot'] + myind.pcbhickness
+    h_window_planar = core['PCB_Spacing_top'] + core['PCB_Spacing_bot'] + myind.pcb.thickness
     # Width of the window
     w_window_planar = myind.winding['width'] + 2 * myind.pcb.spacing_hor
     # Specify where the winding should start
-    myind.winding['planar_start'] = np.array([[-w_pillar_planar/2 - myind.pcb.spacing_hor, -core['PCB_Spacing_top'] - myind.pcbhickness/2],
-                                              [w_pillar_planar/2 + myind.pcb.spacing_hor, -core['PCB_Spacing_top'] - myind.pcbhickness/2]])
+    myind.winding['planar_start'] = np.array([[-w_pillar_planar/2 - myind.pcb.spacing_hor, -core['PCB_Spacing_top'] - myind.pcb.thickness/2],
+                                              [w_pillar_planar/2 + myind.pcb.spacing_hor, -core['PCB_Spacing_top'] - myind.pcb.thickness/2]])
 
     ## Calculate dimensions for axisymmetric simulation
     # Calculate the total radius. We can use:
@@ -72,13 +72,13 @@ def coreFourPole(myind, core, simParam):
     h_top_axi = core['A_top'] / (2 * np.pi * r_pillar / 2)
     h_bot_axi = core['A_bot'] / (2 * np.pi * r_pillar / 2)
     # Specify where the winding should start
-    myind.winding['axi_start'] = np.array([r_pillar + myind.pcb.spacing_hor, -core['PCB_Spacing_top'] - myind.pcbhickness/2])
+    myind.winding['axi_start'] = np.array([r_pillar + myind.pcb.spacing_hor, -core['PCB_Spacing_top'] - myind.pcb.thickness/2])
 
     ## Specify where the "air"-property should be placed
     # For planar, place "air" above the core
-    myind.air_planar = np.array([0, (myind.pcbhickness/2 + core['PCB_Spacing_top'] + h_top_planar) * 1.5])
+    myind.air_planar = np.array([[0, (myind.pcb.thickness/2 + core['PCB_Spacing_top'] + h_top_planar) * 1.5]])
     # For axi, place air above the core
-    myind.air_axi = np.array([r_pillar/2, (myind.pcbhickness/2 + core['PCB_Spacing_top'] + h_top_axi) * 1.5])
+    myind.air_axi = np.array([[r_pillar/2, (myind.pcb.thickness/2 + core['PCB_Spacing_top'] + h_top_axi) * 1.5]])
 
     ## Calculate rectangles for planar simulation
     # The core is symmetric, so only one half needs to be drawn. Then it

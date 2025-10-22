@@ -52,7 +52,7 @@ def coreSingleInductor(myind, core, simParam):
     # cross-sectional area is smaller then at the outside
     h_top_planar = core['A_top'] / myind.depth_planar
     # Specify where the winding should start
-    myind.winding['planar_start'] = np.array([[-w_center, 0], [w_center, 0]]).T
+    myind.winding['planar_start'] = np.array([[-w_center, 0], [w_center, 0]])
 
     ## Calculate dimensions for axisymmetric simulation
     # Area inside the winding, and winding width are the same as in the
@@ -73,9 +73,9 @@ def coreSingleInductor(myind, core, simParam):
 
     ## Specify where the "air"-property should be placed
     # For planar, place "air" in the center and above the core
-    myind.air_planar = np.array([[0, 0], [0, (myind.pcb.thickness/2 + core['PCB_Spacing'] + h_top_planar) * 1.5]]).T
+    myind.air_planar = np.array([[0, 0], [0, (myind.pcb.thickness/2 + core['PCB_Spacing'] + h_top_planar) * 1.5]])
     # For axi, place air slightly right of center and above the core
-    myind.air_axi = np.array([[r_windingInner/2, 0], [r_windingInner/2, (myind.pcb.thickness/2 + core['PCB_Spacing'] + h_top_axi) * 1.5]]).T
+    myind.air_axi = np.array([[r_windingInner/2, 0], [r_windingInner/2, (myind.pcb.thickness/2 + core['PCB_Spacing'] + h_top_axi) * 1.5]])
 
     ## Calculate the rectangles
     # When specifying the rectangles make sure to use areas with relatively

@@ -71,9 +71,9 @@ def drawAxisymmetricInductor(myind, simParam):
             femm.mi_clearselected()
 
         ## Add air-properties
-        for i in range(myind.air_axi.shape[1]):
-            femm.mi_addblocklabel(myind.air_axi[0, i], myind.air_axi[1, i])
-            femm.mi_selectlabel(myind.air_axi[0, i], myind.air_axi[1, i])
+        for i in range(myind.air_axi.shape[0]):
+            femm.mi_addblocklabel(myind.air_axi[i, 0], myind.air_axi[i, 1])
+            femm.mi_selectlabel(myind.air_axi[i, 0], myind.air_axi[i, 1])
             femm.mi_setblockprop('Air', simParam.AIR_AUTOMESH, simParam.AIR_MESHSIZE, '<None>', 0, 0, 0)
             femm.mi_clearselected()
 

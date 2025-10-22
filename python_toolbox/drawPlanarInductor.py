@@ -69,6 +69,10 @@ def drawPlanarInductor(myind, simParam):
 
         ## Draw the core and add block labels
         for i in range(myind.rects_planar.shape[0]):
+            try:
+                print(myind.names_planar[i])
+            except:
+                pass
             femm.mi_drawrectangle(myind.rects_planar[i, 0, 0], myind.rects_planar[i, 0, 1],
                                 myind.rects_planar[i, 1, 0], myind.rects_planar[i, 1, 1])
             femm.mi_addblocklabel(myind.centers_planar[0, i], myind.centers_planar[1, i])
@@ -77,21 +81,21 @@ def drawPlanarInductor(myind, simParam):
             femm.mi_clearselected()
 
         ## Add air-properties
-        for i in range(myind.air_planar.shape[1]):
-            femm.mi_addblocklabel(myind.air_planar[0, i], myind.air_planar[1, i])
-            femm.mi_selectlabel(myind.air_planar[0, i], myind.air_planar[1, i])
+        for i in range(myind.air_planar.shape[0]):
+            femm.mi_addblocklabel(myind.air_planar[i, 0], myind.air_planar[i, 1])
+            femm.mi_selectlabel(myind.air_planar[i, 0], myind.air_planar[i, 1])
             femm.mi_setblockprop('Air', simParam.AIR_AUTOMESH, simParam.AIR_MESHSIZE, '<None>', 0, 0, 0)
             femm.mi_clearselected()
 
         # Draw the windings
-        myind.winding['function'](myind, 'Al', myind.winding['planar_start'][:, 0], 'l', simParam)
-        myind.winding['function'](myind, 'Ar', myind.winding['planar_start'][:, 1], 'r', simParam)
+        myind.winding['function'](myind, 'Al', myind.winding['planar_start'][0], 'l', simParam)
+        myind.winding['function'](myind, 'Ar', myind.winding['planar_start'][1], 'r', simParam)
         if myind.coupled < 0:
-            myind.winding['function'](myind, 'Bl', myind.winding['planar_start'][:, 2], 'l', simParam)
-            myind.winding['function'](myind, 'Br', myind.winding['planar_start'][:, 3], 'r', simParam)
+            myind.winding['function'](myind, 'Bl', myind.winding['planar_start'][2], 'l', simParam)
+            myind.winding['function'](myind, 'Br', myind.winding['planar_start'][3], 'r', simParam)
         elif myind.coupled > 0:
-            myind.winding['function'](myind, 'Br', myind.winding['planar_start'][:, 2], 'l', simParam)
-            myind.winding['function'](myind, 'Bl', myind.winding['planar_start'][:, 3], 'r', simParam)
+            myind.winding['function'](myind, 'Br', myind.winding['planar_start'][2], 'l', simParam)
+            myind.winding['function'](myind, 'Bl', myind.winding['planar_start'][3], 'r', simParam)
 
         # Make the Dirichlet Boundary at the end because for some reason this
         # speeds up the process a lot. Automatically zooms to natural at the end.
