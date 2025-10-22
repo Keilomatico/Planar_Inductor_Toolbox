@@ -70,11 +70,13 @@ for simCounter in range(len(simDesign)):
         # Prepare a result object
         result[0] = Result()
         drawPlanarInductor(myind, simParam)
+        msg.print_msg(3, f"Saved to: {myind.filename_planar}.fem\n", simParam)
         result[0] = getInductancePlanar(myind, result[0], msg, simParam)
 
     ## Draw the axisymmetric inductor if the user wants to do an axisymmetric simulation
     if simParam.SIMULATIONS[1] == 1:
         drawAxisymmetricInductor(myind, simParam)
+        msg.print_msg(3, f"Saved to: {myind.filename_axi}.fem\n", simParam)
         # Reuse the contents of result[0] and only modify L_self
         # The reason is, that the other parameters cannot be determined
         # from axisymmetric simulation for coupled inductors

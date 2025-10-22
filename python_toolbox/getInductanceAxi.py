@@ -40,7 +40,7 @@ def getInductanceAxi(myind, res, msg, simParam):
     # Get the self inductance by dividing flux linkage by current
     # Due to rounding errors the value sometimes has a very small imaginary
     # component that needs to be removed
-    res.L_self = np.real(np.sum(vals[:, 2]) / vals[0, 0])
+    res.L_self = float(np.real(np.sum(vals[:, 2]) / vals[0, 0]))
     res.calcTrafoModel()
     msg.print_msg(2, f'Simulated inductance axi: Lself={res.L_self*1e9:.1f} nH\n', simParam)
     

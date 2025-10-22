@@ -15,6 +15,7 @@
 # along with this program.  
 # If not, see https://www.gnu.org/licenses/gpl-3.0.html
 
+import os
 import numpy as np
 import femm
 from Material import Material
@@ -132,8 +133,8 @@ class Inductor:
     # This also sets filename_planar and filename_axi
     def createUniqueName(self, customText, simParam):
         self.uniqueName = f"{customText}_{self.description}_{self.material.name}_whd_{self.dimension['width']:.2f}_{self.dimension['height']:.2f}_{self.dimension['depth']:.2f}"
-        self.filename_planar = f"{simParam.femm_folder}/planar_{self.uniqueName}"
-        self.filename_axi = f"{simParam.femm_folder}/axi_{self.uniqueName}"
+        self.filename_planar = os.path.join(simParam.femm_folder, f"planar_{self.uniqueName}")
+        self.filename_axi = os.path.join(simParam.femm_folder, f"axi_{self.uniqueName}")
 
     # Show the design
     # result: Array with the result objects

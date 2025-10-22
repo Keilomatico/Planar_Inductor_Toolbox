@@ -49,15 +49,15 @@ def getInductancePlanar(myind, res, msg, simParam):
     # All series turns have the same current, so no need to add them up.
     # Due to rounding errors the value sometimes has a very small imaginary
     # component that needs to be removed
-    res.L_self = (np.sum(np.real(valsAl[:, 2])) - np.sum(np.real(valsAr[:, 2]))) / valsAl[0, 0]
+    res.L_self = float(np.real((np.sum(np.real(valsAl[:, 2])) - np.sum(np.real(valsAr[:, 2]))) / valsAl[0, 0]))
     if not (myind.coupled == 0):
-        res.L_coupled = (np.sum(np.real(valsBl[:, 2])) - np.sum(np.real(valsBr[:, 2]))) / valsAl[0, 0]
+        res.L_coupled = float(np.real((np.sum(np.real(valsBl[:, 2])) - np.sum(np.real(valsBr[:, 2]))) / valsAl[0, 0]))
         # Not sure why this was put here 
         # if sign(winding(1)) ~= sign(winding(2))
         #    res.L_coupled = -res.L_coupled
         # end
     else:
-        res.L_coupled = 0
+        res.L_coupled = 0.0
     
     res.k = res.L_coupled / res.L_self
     res.calcTrafoModel()

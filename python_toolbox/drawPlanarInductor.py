@@ -69,10 +69,6 @@ def drawPlanarInductor(myind, simParam):
 
         ## Draw the core and add block labels
         for i in range(myind.rects_planar.shape[0]):
-            try:
-                print(myind.names_planar[i])
-            except:
-                pass
             femm.mi_drawrectangle(myind.rects_planar[i, 0, 0], myind.rects_planar[i, 0, 1],
                                 myind.rects_planar[i, 1, 0], myind.rects_planar[i, 1, 1])
             femm.mi_addblocklabel(myind.centers_planar[0, i], myind.centers_planar[1, i])
@@ -102,6 +98,21 @@ def drawPlanarInductor(myind, simParam):
         femm.mi_makeABC(3, np.max(np.abs(myind.rects_planar[:, :, 0])) * 2, 0, 0, 0)
         
         # Save the file
-        femm.mi_saveas(f"{myind.filename_planar}.fem")
+        # Convert to absolute path to avoid working directory issues
+        file_path = os.path.abspath(f"{myind.filename_planar}.fem")
+        file_dir = os.path.dirname(file_path)
+        
+        # Ensure directory exists
+        if file_dir and not os.path.exists(file_dir):
+            os.makedirs(file_dir)
+        
+        # Remove existing file if it exists (in case it's read-only or locked)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"Warning: Could not remove existing file {file_path}: {e}")
+        
+        femm.mi_saveas(file_path)
     
         femm.closefemm()
