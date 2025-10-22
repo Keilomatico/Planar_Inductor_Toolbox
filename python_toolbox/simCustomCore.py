@@ -32,7 +32,7 @@ from drawPlanarInductor import drawPlanarInductor
 from drawAxisymmetricInductor import drawAxisymmetricInductor
 from getInductancePlanar import getInductancePlanar
 from getInductanceAxi import getInductanceAxi
-from helperFunctions import getWaveformMath, calcCapacitance, myrms, getSpectrum, sortData
+from helperFunctions import getWaveformMath, calcCapacitance, myrms, getSpectrum, sortData, displayLossDensityTable
 from corelossSullivan import corelossSullivan
 
 # Specify which windings should be simulated
@@ -293,73 +293,8 @@ for simCounter in range(len(simDesign)):
                 # Total loss in W
                 result[simnum].loss_core = result[simnum].loss_core + result[simnum].loss_core_area[i] * vol[i] * 1e3
                 
-            # Export the results in a nice sorted table which is much easier to
-            # read than the normal print
-            myPtable = pd.DataFrame({
-                'Area': areaNames,
-                'Loss': result[simnum].loss_core_area[:len(areaNames)]
-            })
-            myPtable = myPtable.sort_values('Loss', ascending=False)
-            
-            myHtable = pd.DataFrame({
-                'Area': areaNames,
-                'Hdc': result[simnum].Hdc[:len(areaNames)]
-            })
-            myHtable = myHtable.sort_values('Hdc', ascending=False)
-            
-            # Create a combined table for visualization
-            combined_table = pd.DataFrame({
-                'Area': myPtable['Area'].values,
-                'Loss Density [mW/cm³]': myPtable['Loss'].values
-            })
-            
-            # Add Hdc values in the same order as loss densities
-            hdc_dict = dict(zip(myHtable['Area'], myHtable['Hdc']))
-            combined_table['Hdc [A/m]'] = combined_table['Area'].map(hdc_dict)
-            
-            # Display table in plot window
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots(figsize=(12, len(areaNames) * 0.4 + 1))
-            ax.axis('tight')
-            ax.axis('off')
-            
-            sim_type = "Planar" if simnum == 0 else "Axisymmetric"
-            title = f'Core Loss Densities and DC Magnetic Field - {sim_type} Simulation'
-            ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
-            
-            # Format the data for display
-            table_data = []
-            for idx, row in combined_table.iterrows():
-                table_data.append([
-                    row['Area'],
-                    f"{row['Loss Density [mW/cm³]']:.1f}",
-                    f"{row['Hdc [A/m]']:.1f}"
-                ])
-            
-            table = ax.table(cellText=table_data,
-                           colLabels=['Area', 'Loss Density [mW/cm³]', 'Hdc [A/m]'],
-                           cellLoc='left',
-                           loc='center',
-                           colWidths=[0.5, 0.25, 0.25])
-            
-            table.auto_set_font_size(False)
-            table.set_fontsize(10)
-            table.scale(1, 2)
-            
-            # Style the header
-            for i in range(3):
-                table[(0, i)].set_facecolor('#4472C4')
-                table[(0, i)].set_text_props(weight='bold', color='white')
-            
-            # Alternate row colors
-            for i in range(1, len(table_data) + 1):
-                for j in range(3):
-                    if i % 2 == 0:
-                        table[(i, j)].set_facecolor('#E7E6E6')
-                    else:
-                        table[(i, j)].set_facecolor('#F2F2F2')
-            
-            plt.tight_layout()
+            # Display the loss densities and Hdc values in a table
+            displayLossDensityTable(areaNames, result[simnum].loss_core_area, result[simnum].Hdc, simnum)
 
             # Multiply overall core loss depending on the amout of symmetry
             if simnum == 0:

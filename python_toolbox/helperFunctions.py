@@ -255,3 +255,78 @@ def calcCapacitance(time, current, res, simParam):
         plt.show()
     
     return res
+
+def displayLossDensityTable(areaNames, loss_core_area, Hdc, simnum):
+    """Displays a formatted table of core loss densities and DC magnetic field values
+    
+    Args:
+        areaNames: List of area names
+        loss_core_area: Array of loss densities [mW/cm³]
+        Hdc: Array of DC magnetic field values [A/m]
+        simnum: Simulation number (0 for planar, 1 for axisymmetric)
+    """
+    # Create DataFrames and sort by loss density
+    myPtable = pd.DataFrame({
+        'Area': areaNames,
+        'Loss': loss_core_area[:len(areaNames)]
+    })
+    myPtable = myPtable.sort_values('Loss', ascending=False)
+    
+    myHtable = pd.DataFrame({
+        'Area': areaNames,
+        'Hdc': Hdc[:len(areaNames)]
+    })
+    myHtable = myHtable.sort_values('Hdc', ascending=False)
+    
+    # Create a combined table for visualization
+    combined_table = pd.DataFrame({
+        'Area': myPtable['Area'].values,
+        'Loss Density [mW/cm³]': myPtable['Loss'].values
+    })
+    
+    # Add Hdc values in the same order as loss densities
+    hdc_dict = dict(zip(myHtable['Area'], myHtable['Hdc']))
+    combined_table['Hdc [A/m]'] = combined_table['Area'].map(hdc_dict)
+    
+    # Display table in plot window
+    fig, ax = plt.subplots(figsize=(12, len(areaNames) * 0.4 + 1))
+    ax.axis('tight')
+    ax.axis('off')
+    
+    sim_type = "Planar" if simnum == 0 else "Axisymmetric"
+    title = f'Core Loss Densities and DC Magnetic Field - {sim_type} Simulation'
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
+    
+    # Format the data for display
+    table_data = []
+    for idx, row in combined_table.iterrows():
+        table_data.append([
+            row['Area'],
+            f"{row['Loss Density [mW/cm³]']:.1f}",
+            f"{row['Hdc [A/m]']:.1f}"
+        ])
+    
+    table = ax.table(cellText=table_data,
+                   colLabels=['Area', 'Loss Density [mW/cm³]', 'Hdc [A/m]'],
+                   cellLoc='left',
+                   loc='center',
+                   colWidths=[0.5, 0.25, 0.25])
+    
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1, 2)
+    
+    # Style the header
+    for i in range(3):
+        table[(0, i)].set_facecolor('#4472C4')
+        table[(0, i)].set_text_props(weight='bold', color='white')
+    
+    # Alternate row colors
+    for i in range(1, len(table_data) + 1):
+        for j in range(3):
+            if i % 2 == 0:
+                table[(i, j)].set_facecolor('#E7E6E6')
+            else:
+                table[(i, j)].set_facecolor('#F2F2F2')
+    
+    plt.tight_layout()
