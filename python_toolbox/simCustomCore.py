@@ -247,7 +247,7 @@ for simCounter in range(len(simDesign)):
                 vol = np.zeros(len(areaNames))
                 for i in range(len(areaNames)):
                     femm.mo_selectblock(areaCenters[0, i], areaCenters[1, i])
-                    vol[i] = float(np.real(femm.mo_blockintegral(10)))
+                    vol[i] = femm.mo_blockintegral(10)
                     # Get the average flux densities
                     bx = femm.mo_blockintegral(8) / vol[i]
                     by = femm.mo_blockintegral(9) / vol[i]
@@ -270,7 +270,7 @@ for simCounter in range(len(simDesign)):
                 femm.closefemm()
 
             # Multiply total copper loss by two for the two coils
-            result[simnum].loss_copper = float(np.real(result[simnum].loss_copper * 2))
+            result[simnum].loss_copper = result[simnum].loss_copper * 2
             msg.print_msg(0, f"Copper Loss: {result[simnum].loss_copper:.1f} W\n", simParam)
             # Calculate DC-resistance 
             res_dc = result[simnum].loss_copper_harmonic[dc_index] / (simParam.iout_avg / 2)**2
@@ -319,11 +319,11 @@ for simCounter in range(len(simDesign)):
                 # For axisymmetric simulation, only the y-direction matters
                 # *2 because only one core is simulated
                 result[simnum].loss_core = result[simnum].loss_core * 2 * (myind.symm[1] + 1)
-            result[simnum].loss_core = float(np.real(result[simnum].loss_core))
+            result[simnum].loss_core = result[simnum].loss_core
             msg.print_msg(0, f"Core Loss: {result[simnum].loss_core:.1f} W\n", simParam)
     
             # Total loss
-            result[simnum].loss_total = float(np.real(result[simnum].loss_core + result[simnum].loss_copper + result[simnum].conduction_loss))
+            result[simnum].loss_total = result[simnum].loss_core + result[simnum].loss_copper + result[simnum].conduction_loss
             msg.print_msg(0, f"Total Loss: {result[simnum].loss_total:.2f}W\n", simParam)
             msg.print_msg(0, f"Total Efficiency: {(1-result[simnum].loss_total/simParam.pout)*100:.2f} %\n", simParam)
 
