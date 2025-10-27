@@ -113,8 +113,8 @@ class SimulationParameters:
         
         ## --------------------FET--------------------
         self.Rds_on = 1.4e-3 / 2           # Total on-resistance
-        self.Cds = 2e-9                  # Drain-Source capacitance
-        self.deadTime = 20e-9            # Desired dead time
+        self.Cds = 1e-9                  # Drain-Source capacitance
+        self.deadTime = 5e-9            # Desired dead time
         
         # Calculated parameters
         self.D = self.Vout / self.Vin
