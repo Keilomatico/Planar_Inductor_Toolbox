@@ -294,6 +294,26 @@ for simCounter in range(len(simDesign)):
                 
             # Display the loss densities and Hdc values in a table
             displayLossDensityTable(areaNames, result[simnum].loss_core_area, result[simnum].Hdc, vol, simnum)
+            
+            # Sum losses for different parts as indicated by their by prefix (before first underscore)
+            if simnum == 0:
+                part_losses = {}
+                for i in range(len(areaNames)):
+                    # Extract part (everything before the first underscore)
+                    part = areaNames[i].split('_')[0] if '_' in areaNames[i] else areaNames[i]
+                    # Calculate total loss for this area in mW
+                    # Multiply by the number of symmetry axis *2
+                    area_loss = result[simnum].loss_core_area[i] * vol[i] * (np.sum(myind.symm)+1) * 1e6
+                    # Add to part sum
+                    if part in part_losses:
+                        part_losses[part] += area_loss
+                    else:
+                        part_losses[part] = area_loss
+                
+                # Print summed losses by part
+                msg.print_msg(1, "Core loss by region [mW]:\n", simParam)
+                for part in sorted(part_losses.keys(), key=lambda x: part_losses[x], reverse=True):
+                    msg.print_msg(1, f"  {part}: {part_losses[part]:.1f} mW\n", simParam)
 
             # Multiply overall core loss depending on the amout of symmetry
             if simnum == 0:
