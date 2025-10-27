@@ -49,11 +49,11 @@ classdef simulationParameters
         % planar simulation because axisymmetric cannot reflect coupling
         % (except for designs with both windigs on one limb but that is 
         % too special to make an exception)
-        SIMULATIONS = [1, 1];
+        SIMULATIONS = [1, 0];
         % Calculate the required capacitance
-        CALC_CAP = true;
+        CALC_CAP = false;
         % Show plots
-        SHOWPLOTS = 0;
+        SHOWPLOTS = 1;
         % Show the design in the end
         SHOWDESIGN = 1;
     
@@ -76,7 +76,7 @@ classdef simulationParameters
         reuse_file = 0;
 
         % Path to the folder in which the femm-files are stored
-        femm_folder = 'femm'
+        femm_folder = 'C:\Users\adria\Documents\Masterarbeit\femm'
         % Path to the folder in which the logfiles are stored
         log_folder = 'logfiles'
         % Path to the folder in which the .m-files are stored
@@ -106,8 +106,8 @@ classdef simulationParameters
         
         %% --------------------FET--------------------
         Rds_on = 1.4e-3/2;           % Total on-resistance
-        Cds = 2e-9;                  % Drain-Source capacitance
-        deadTime = 20e-9;            % Desired dead time
+        Cds = 1e-9;                  % Drain-Source capacitance
+        deadTime = 5e-9;             % Desired dead time
     end
 
     methods

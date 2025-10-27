@@ -119,7 +119,7 @@ function myind = designs(design_num, simParam)
             % Negative coupling
             myind.coupled = -1;
             myind.winding.width = 3;
-            myind.winding.function = @curvedWinding;
+            myind.winding.function = @curvedWinding;%@curvedWindingUnequal;
             % Settings for curved windings. 
             % Add them to myind such that they will be passed to the
             % function
@@ -147,14 +147,20 @@ function myind = designs(design_num, simParam)
     
             myind = coreFourPole(myind, fpParam, simParam);
         case 5
-            % Four-Pole with negative coupling
+            % Four-Pole with positive coupling
             myind.description = "Four-pole, positive coupling";
             % Single turn
             myind.turns = 1;
-            % Negative coupling
+            % Positive coupling
             myind.coupled = 1;
             myind.winding.width = 3;
-            myind.winding.function = @standardWinding;
+            myind.winding.function = @curvedWindingUnequal;
+            % Settings for curved windings. 
+            % Add them to myind such that they will be passed to the
+            % function
+            myind.winding.shortenWindingRadius = 0.6;
+            % Increase the effect of shortening
+            myind.winding.shortenFactor = 4;
 
             % Specify the parameters of the inductor
             % Area of the side (for each side)
@@ -168,6 +174,113 @@ function myind = designs(design_num, simParam)
             % stays more or less constant when area is modified
             fpParam.gap_side = fpParam.A_side / 32;
             fpParam.gap_pillar = fpParam.A_pillar / 55;
+            % Vertical spacing between PCB and core
+            fpParam.PCB_Spacing_top = 1.4;
+            fpParam.PCB_Spacing_bot = 1.2;
+            % Center the pillar
+            fpParam.centerPillar = true;
+    
+            myind = coreFourPole(myind, fpParam, simParam);
+        case 6
+            % Four-Pole with curved windings and faulty layer order
+            myind.description = "Four-pole, curved winding, faulty layer order";
+            % Single turn
+            myind.turns = 1;
+            % Negative coupling
+            myind.coupled = -1;
+            myind.winding.width = 3;
+            myind.winding.function = @curvedWindingUnequal_faulty;
+            % Settings for curved windings. 
+            % Add them to myind such that they will be passed to the
+            % function
+            myind.winding.shortenWindingRadius = 0.6;
+            % Increase the effect of shortening
+            myind.winding.shortenFactor = 4;
+
+            % Specify the parameters of the inductor
+            % Area of the side (for each side)
+            fpParam.A_side = 40;
+            % Area of the pillar
+            fpParam.A_pillar = 50;
+            % Cross-sectional area of the top/bottom piece 
+            fpParam.A_top = 40;
+            fpParam.A_bot = 45;
+            % Express gaps in relation to the area such that reluctance
+            % stays more or less constant when area is modified
+            fpParam.gap_side = fpParam.A_side / 32;
+            fpParam.gap_pillar = fpParam.A_pillar / 55;
+            % Vertical spacing between PCB and core
+            fpParam.PCB_Spacing_top = 1.4;
+            fpParam.PCB_Spacing_bot = 1.2;
+            % Center the pillar
+            fpParam.centerPillar = true;
+    
+            myind = coreFourPole(myind, fpParam, simParam);
+        case 7
+            % Four-Pole with curved windings, low frequency
+            % Use a different material
+            myind = Inductor("N97");
+            myind.description = "Four-pole, low freq";
+            % Single turn
+            myind.turns = 1;
+            % Negative coupling
+            myind.coupled = -1;
+            myind.winding.width = 3;
+            myind.winding.function = @curvedWindingUnequal;
+            % Settings for curved windings. 
+            % Add them to myind such that they will be passed to the
+            % function
+            myind.winding.shortenWindingRadius = 0.6;
+            % Increase the effect of shortening
+            myind.winding.shortenFactor = 4;
+
+            % Specify the parameters of the inductor
+            % Area of the side (for each side)
+            fpParam.A_side = 40;
+            % Area of the pillar
+            fpParam.A_pillar = 50;
+            % Cross-sectional area of the top/bottom piece 
+            fpParam.A_top = 40;
+            fpParam.A_bot = 45;
+            % Gap cannot be too small, otherwise core saturates!
+            fpParam.gap_side = 0.2; %fpParam.A_side / 32;
+            fpParam.gap_pillar = 0.2; %fpParam.A_pillar / 55;
+            % Vertical spacing between PCB and core
+            fpParam.PCB_Spacing_top = 1.4;
+            fpParam.PCB_Spacing_bot = 1.2;
+            % Center the pillar
+            fpParam.centerPillar = true;
+    
+            myind = coreFourPole(myind, fpParam, simParam);
+        case 8
+            % Four-Pole with curved windings, low frequency, 2 turns
+            % Use a different material
+            myind = Inductor("N97");
+            myind.description = "Four-pole, low freq";
+            % Single turn
+            myind.turns = 2;
+            % Negative coupling
+            myind.coupled = -1;
+            myind.winding.width = 3;
+            myind.winding.function = @curvedWindingUnequal;
+            % Settings for curved windings. 
+            % Add them to myind such that they will be passed to the
+            % function
+            myind.winding.shortenWindingRadius = 0.6;
+            % Increase the effect of shortening
+            myind.winding.shortenFactor = 4;
+
+            % Specify the parameters of the inductor
+            % Area of the side (for each side)
+            fpParam.A_side = 40;
+            % Area of the pillar
+            fpParam.A_pillar = 50;
+            % Cross-sectional area of the top/bottom piece 
+            fpParam.A_top = 40;
+            fpParam.A_bot = 45;
+            % Gap cannot be too small, otherwise core saturates!
+            fpParam.gap_side = 0.25; %fpParam.A_side / 32;
+            fpParam.gap_pillar = 0.25; %fpParam.A_pillar / 55;
             % Vertical spacing between PCB and core
             fpParam.PCB_Spacing_top = 1.4;
             fpParam.PCB_Spacing_bot = 1.2;

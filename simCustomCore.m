@@ -90,6 +90,8 @@ for simCounter=1:length(simDesign)
                 result(simnum).fs = simParam.Vin*Ts*(1-simParam.D)/(2*result(simnum).L_self*leg_ripple) * (2/(1+result(simnum).k)*(simParam.D-0.5)+1/(1-result(simnum).k));
             end
             msg.print(2, sprintf("fs = %.2f MHz\n", result(simnum).fs*1e-6), simParam);
+            %result(simnum).fs = 2e6;
+            %msg.print(2, sprintf("fs overwritten to %.2f MHz\n", result(simnum).fs*1e-6), simParam);
         
             %% Get the waveform
             [current, time] = getWaveformMath(simParam, result(simnum).fs, result(simnum));
@@ -145,6 +147,8 @@ for simCounter=1:length(simDesign)
             time_interpol = linspace(0, time(end), 1000);
             result(simnum).bx_waveform = zeros(length(areaCenters), length(time_interpol));
             result(simnum).by_waveform = zeros(length(areaCenters), length(time_interpol));
+            % Index of the DC simulation
+            dc_index = -1;
             % Analyze the larges NUM_HARMONICS harmonics plus DC
             for harmonic = 1:simParam.NUM_HARMONICS+1
                 % If the amplitude of the harmonic is much smaller than the
@@ -253,7 +257,11 @@ for simCounter=1:length(simDesign)
             result(simnum).loss_copper = result(simnum).loss_copper*2;
             msg.print(0, sprintf("Copper Loss: %.1f W\n", result(simnum).loss_copper), simParam);
             % Calculate DC-resistance 
-            res_dc = result(simnum).loss_copper_harmonic(dc_index) / (simParam.iout_avg/2)^2;
+            if dc_index >= 0
+                res_dc = result(simnum).loss_copper_harmonic(dc_index) / (simParam.iout_avg/2)^2;
+            else
+                res_dc = 0;
+            end
             % Compare the loss with the loss that would occur for a
             % constant resistivity
             loss_const = res_dc * (myrms(time, current.i1)^2 + myrms(time, current.i2)^2);
@@ -262,6 +270,10 @@ for simCounter=1:length(simDesign)
             % Compute the loss-density for each area using iGSE
             result(simnum).loss_core = 0;
             msg.print(3, sprintf("Loss densities [mW/cm^3]: \n"), simParam);
+            if simParam.SHOWPLOTS
+                figure;
+                hold on
+            end
             for i=1:length(areaNames)
                 % Calculate loss in x and y direction independently
                 result(simnum).bx_waveform(i, end) = result(simnum).bx_waveform(i, 1);    % Somehow needed for the coreloss script to work
@@ -272,16 +284,36 @@ for simCounter=1:length(simDesign)
                 msg.print(5, sprintf("    %s: %.0f mW/cm^3\n", areaNames(i), result(simnum).loss_core_area(i)), simParam);
                 % Total loss in W
                 result(simnum).loss_core = result(simnum).loss_core+result(simnum).loss_core_area(i)*vol(i)*1e3;
+                % Max flux
+                babs_waveform = sqrt(result(simnum).bx_waveform(i, :).^2+result(simnum).by_waveform(i, :).^2);
+                % Calculate using standard Steinmetz:
+                %result(simnum).loss_core_area(i) = myind.material.k * result(simnum).fs^myind.material.fexp * max(babs_waveform)^myind.material.bexp;
+                %msg.print(2, sprintf("    %s: %.0f mT\n", areaNames(i), max(abs(babs_waveform))*1e3), simParam);
+                if simParam.SHOWPLOTS
+                    %plot(time_interpol*1e6, babs_waveform*1e3, 'DisplayName', areaNames(i))
+                    plot(time_interpol*1e6, result(simnum).bx_waveform(i, :)*1e3, 'DisplayName', areaNames(i))
+                end
             end
+            if simParam.SHOWPLOTS
+                hold off
+                grid('on')
+                xlabel("Time [us]")
+                ylabel("Flux-Density [mT]")
+                legend('Location','northwest')
+                xlim([0, time_interpol(end)*1e6]);
+            end
+
             % Export the results in a nice sorted table which is much easier to
             % read than the normal print
             myPtable = table(areaNames', result(simnum).loss_core_area(1:length(areaNames))');
             myPtable = sortrows(myPtable,2,'descend');
             disp(array2table(table2array(myPtable(:,2))',"VariableNames",table2array(myPtable(:,1))'))
-            fprintf("Hdc [A/m]: \n");
-            myHtable = table(areaNames', result(simnum).Hdc');
-            myHtable = sortrows(myHtable,2,'descend');
-            disp(array2table(table2array(myHtable(:,2))',"VariableNames",table2array(myHtable(:,1))'))
+            if dc_index >= 0
+                fprintf("Hdc [A/m]: \n");
+                myHtable = table(areaNames', result(simnum).Hdc');
+                myHtable = sortrows(myHtable,2,'descend');
+                disp(array2table(table2array(myHtable(:,2))',"VariableNames",table2array(myHtable(:,1))'))
+            end
 
             % Multiply overall core loss depending on the amout of symmetry
             if simnum == 1
@@ -325,3 +357,26 @@ for simCounter=1:length(simDesign)
     % Close all files that may still be open
     fclose('all');
 end
+
+% Losses per area (absolute)
+loss_core_area_absolute = result(1).loss_core_area .* vol * 1e3;
+loss_core_area_absolute = loss_core_area_absolute * (sum(myind.symm)+1);
+% This is too much I think because core isn't mirrored anymore
+%if myind.coupled
+%    result(simnum).loss_core = result(simnum).loss_core * 2;
+%end
+
+% Logical index for Bot_ areas
+idxBot = startsWith(areaNames, "Bot_");
+% Logical index for exact match with "Side"
+idxSide = (areaNames == "Side");
+% Combine conditions
+idxSelected = idxBot | idxSide;
+% Sum the corresponding losses
+totalBotLoss = sum(loss_core_area_absolute(idxSelected));
+% Display result
+fprintf('U-Corepiece loss (Bot): %.2f W \n', totalBotLoss);
+totalTopLoss = sum(loss_core_area_absolute(startsWith(areaNames, "Top_")));
+fprintf('I-Corepiece loss (Top): %.2f W \n', totalTopLoss);
+totalPillarLoss = sum(loss_core_area_absolute(startsWith(areaNames, "Pillar_")));
+fprintf('Pillar loss (both): %.2f W \n', totalPillarLoss);

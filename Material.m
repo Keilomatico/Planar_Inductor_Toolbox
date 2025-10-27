@@ -71,6 +71,16 @@ classdef Material < handle
                 B = 50e-3;
                 obj.k = P/(f^obj.fexp*B^obj.bexp);
                 obj.mu = 800;   
+            elseif strcmp(materialName , "N97")
+                % Steinmetz Parameters for TDK N97. f = 300 kHz and T = 100 °C, 200 mT 
+                % https://tools.tdk-electronics.tdk.com/mdt/index.php/pl_flux_density
+                obj.fexp = 1.541;
+                obj.bexp = 2.3934;
+                P = 346.11;
+                f = 300e3;
+                B = 100e-3;
+                obj.k = P/(f^obj.fexp*B^obj.bexp);
+                obj.mu = 2300;   
             end
         end
     end
