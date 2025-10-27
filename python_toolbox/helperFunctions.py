@@ -288,16 +288,8 @@ def displayLossDensityTable(areaNames, loss_core_area, Hdc, simnum):
     hdc_dict = dict(zip(myHtable['Area'], myHtable['Hdc']))
     combined_table['Hdc [A/m]'] = combined_table['Area'].map(hdc_dict)
     
-    # Display table in plot window
-    fig, ax = plt.subplots(figsize=(12, len(areaNames) * 0.4 + 1))
-    ax.axis('tight')
-    ax.axis('off')
-    
-    sim_type = "Planar" if simnum == 0 else "Axisymmetric"
-    title = f'Core Loss Densities and DC Magnetic Field - {sim_type} Simulation'
-    ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
-    
     # Format the data for display
+    col_headers = ['Area', 'Loss Density [mW/cm³]', 'Hdc [A/m]']
     table_data = []
     for idx, row in combined_table.iterrows():
         table_data.append([
@@ -306,11 +298,36 @@ def displayLossDensityTable(areaNames, loss_core_area, Hdc, simnum):
             f"{row['Hdc [A/m]']:.1f}"
         ])
     
+    # Calculate column widths based on content
+    max_area_len = max([len(str(name)) for name in combined_table['Area']])
+    max_loss_len = len('Loss Density [mW/cm³]')  # Header is typically longest
+    max_hdc_len = len('Hdc [A/m]')  # Header is typically longest
+    
+    # Calculate relative widths (add padding factor)
+    total_len = max_area_len + max_loss_len + max_hdc_len
+    col_widths = [
+        max_area_len / total_len * 1.1,
+        max_loss_len / total_len * 1.1,
+        max_hdc_len / total_len * 1.1
+    ]
+    
+    # Adjust figure width based on content
+    fig_width = min(12, max(6, total_len * 0.08))
+    
+    # Display table in plot window
+    fig, ax = plt.subplots(figsize=(fig_width, len(areaNames) * 0.4 + 1))
+    ax.axis('tight')
+    ax.axis('off')
+    
+    sim_type = "Planar" if simnum == 0 else "Axisymmetric"
+    title = f'Core Loss Densities and DC Magnetic Field - {sim_type} Simulation'
+    ax.set_title(title, fontsize=14, fontweight='bold', pad=20)
+    
     table = ax.table(cellText=table_data,
-                   colLabels=['Area', 'Loss Density [mW/cm³]', 'Hdc [A/m]'],
+                   colLabels=col_headers,
                    cellLoc='left',
                    loc='center',
-                   colWidths=[0.5, 0.25, 0.25])
+                   colWidths=col_widths)
     
     table.auto_set_font_size(False)
     table.set_fontsize(10)
@@ -330,3 +347,4 @@ def displayLossDensityTable(areaNames, loss_core_area, Hdc, simnum):
                 table[(i, j)].set_facecolor('#F2F2F2')
     
     plt.tight_layout()
+
