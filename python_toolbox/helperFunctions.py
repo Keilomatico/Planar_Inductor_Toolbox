@@ -261,7 +261,7 @@ def displayLossDensityTable(areaNames, loss_core_area, Hdc, vol, simnum):
     
     Args:
         areaNames: List of area names
-        loss_core_area: Array of loss densities [W/cm³]
+        loss_core_area: Array of loss densities [mW/cm³]
         Hdc: Array of DC magnetic field values [A/m]
         vol: Array of volumes [mm³]
         simnum: Simulation number (0 for planar, 1 for axisymmetric)
@@ -283,31 +283,31 @@ def displayLossDensityTable(areaNames, loss_core_area, Hdc, vol, simnum):
     # Create a combined table for visualization
     combined_table = pd.DataFrame({
         'Area': myPtable['Area'].values,
-        'Loss Density [W/cm³]': myPtable['Loss'].values,
-        'Volume [mm³]': myPtable['Volume'].values
+        'Loss Density [mW/cm³]': myPtable['Loss'].values,
+        'Volume [m³]': myPtable['Volume'].values
     })
     
-    # Calculate total loss per area in mW (loss density [W/cm³] * volume [mm³] * 1e-3 [cm³/mm³])
-    combined_table['Loss [mW]'] = combined_table['Loss Density [W/cm³]'] * combined_table['Volume [mm³]'] * 1e6
+    # Calculate total loss per area in mW (loss density [mW/cm³] * volume [m³] * 1e9 [cm³/m³]) * 1e-3 [W/mW]
+    combined_table['Loss [mW]'] = combined_table['Loss Density [mW/cm³]'] * combined_table['Volume [m³]'] * 1e6
     
     # Add Hdc values in the same order as loss densities
     hdc_dict = dict(zip(myHtable['Area'], myHtable['Hdc']))
     combined_table['Hdc [A/m]'] = combined_table['Area'].map(hdc_dict)
     
     # Format the data for display
-    col_headers = ['Area', 'Loss Density [W/cm³]', 'Loss [mW]', 'Hdc [A/m]']
+    col_headers = ['Area', 'Loss Density [mW/cm³]', 'Loss [mW]', 'Hdc [A/m]']
     table_data = []
     for idx, row in combined_table.iterrows():
         table_data.append([
             row['Area'],
-            f"{row['Loss Density [W/cm³]']:.1f}",
+            f"{row['Loss Density [mW/cm³]']:.1f}",
             f"{row['Loss [mW]']:.1f}",
             f"{row['Hdc [A/m]']:.1f}"
         ])
     
     # Calculate column widths based on content
     max_area_len = max([len(str(name)) for name in combined_table['Area']])
-    max_loss_density_len = len('Loss Density [W/cm³]')
+    max_loss_density_len = len('Loss Density [mW/cm³]')
     max_total_loss_len = len('Loss [mW]')
     max_hdc_len = len('Hdc [A/m]')
     

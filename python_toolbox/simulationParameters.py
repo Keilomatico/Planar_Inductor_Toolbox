@@ -62,7 +62,7 @@ class SimulationParameters:
         # Show plots
         self.SHOWPLOTS = 1
         # Show the design in the end
-        self.SHOWDESIGN = 0
+        self.SHOWDESIGN = 1
         # Which simulation to show: 0 = planar, 1 = axisymmetric
         self.SHOWDESIGN_SIMULATION = 0
     

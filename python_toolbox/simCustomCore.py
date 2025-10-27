@@ -259,10 +259,10 @@ for simCounter in range(len(simDesign)):
                 vol = np.zeros(len(areaNames))
                 for i in range(len(areaNames)):
                     femm.mo_selectblock(areaCenters[0, i], areaCenters[1, i])
-                    vol[i] = femm.mo_blockintegral(10)
+                    vol[i] = femm.mo_blockintegral(10)  # Volume in m^3
                     # Get the average flux densities
-                    bx = femm.mo_blockintegral(8) / vol[i]
-                    by = femm.mo_blockintegral(9) / vol[i]
+                    bx = femm.mo_blockintegral(8) / vol[i]  # flux in T
+                    by = femm.mo_blockintegral(9) / vol[i]  # flux in T
                     femm.mo_clearblock()
             
                     # Add the time-domain waveform of the current frequency
