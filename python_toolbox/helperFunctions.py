@@ -357,4 +357,63 @@ def displayLossDensityTable(areaNames, loss_core_area, Hdc, vol, simnum):
     
     plt.tight_layout()
 
-
+def plotFluxDensityComponent(areaNames, waveform, time_interpol, component, simnum):
+    """Plots flux density waveforms for a specific component (Bx or By)
+    
+    Args:
+        areaNames: List of area names
+        waveform: 2D array of waveforms [T] (areas x time points)
+        time_interpol: Time array [s]
+        component: Component name ('Bx' or 'By')
+        simnum: Simulation number (0 for planar, 1 for axisymmetric)
+    """
+    # Extract prefixes and group areas by prefix
+    prefix_groups = {}
+    for i, name in enumerate(areaNames):
+        prefix = name.split('_')[0] if '_' in name else name
+        if prefix not in prefix_groups:
+            prefix_groups[prefix] = []
+        prefix_groups[prefix].append((i, name))
+    
+    # Define color schemes for each prefix (different color palettes)
+    color_schemes = {
+        0: ['#2E7D32', '#43A047', '#66BB6A', '#81C784', '#A5D6A7'],  # Greens
+        1: ['#1565C0', '#1976D2', '#42A5F5', '#64B5F6', '#90CAF9'],  # Blues
+        2: ['#C62828', '#E53935', '#EF5350', '#E57373', '#EF9A9A'],  # Reds
+        3: ['#6A1B9A', '#8E24AA', '#AB47BC', '#BA68C8', '#CE93D8'],  # Purples
+        4: ['#EF6C00', '#F57C00', '#FF9800', '#FFA726', '#FFB74D'],  # Oranges
+        5: ['#00838F', '#0097A7', '#00ACC1', '#26C6DA', '#4DD0E1'],  # Cyans
+        6: ['#AD1457', '#C2185B', '#E91E63', '#EC407A', '#F06292'],  # Pinks
+        7: ['#558B2F', '#689F38', '#8BC34A', '#9CCC65', '#AED581'],  # Light greens
+    }
+    
+    # Define line styles (excluding solid)
+    line_styles = ['--', '-.', ':', (0, (3, 1, 1, 1)), (0, (5, 1))]  # dashed, dash-dot, dotted, densely dashdotted, densely dashed
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Plot by prefix groups to ensure legend grouping
+    handles = []
+    labels = []
+    
+    for prefix_idx, (prefix, areas) in enumerate(prefix_groups.items()):
+        # Get color scheme for this prefix
+        colors = color_schemes.get(prefix_idx % len(color_schemes), color_schemes[0])
+        
+        for same_prefix_count, (i, name) in enumerate(areas):
+            # Select color and linestyle from their respective schemes (cycle if needed)
+            color = colors[same_prefix_count % len(colors)]
+            linestyle = line_styles[same_prefix_count % len(line_styles)]
+            
+            line, = ax.plot(time_interpol * 1e6, waveform[i, :] * 1e3, 
+                    color=color, linestyle=linestyle, linewidth=1.5, alpha=0.8)
+            handles.append(line)
+            labels.append(name)
+    
+    ax.set_xlabel('Time [µs]')
+    ax.set_ylabel(f'{component} [mT]')
+    sim_type = "Planar" if simnum == 0 else "Axisymmetric"
+    ax.set_title(f'{component} Waveforms by Area - {sim_type} Simulation')
+    ax.grid(True, alpha=0.3)
+    ax.legend(handles, labels, loc='best', fontsize=8, ncol=2)
+    plt.tight_layout()

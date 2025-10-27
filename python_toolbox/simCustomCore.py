@@ -32,7 +32,7 @@ from drawPlanarInductor import drawPlanarInductor
 from drawAxisymmetricInductor import drawAxisymmetricInductor
 from getInductancePlanar import getInductancePlanar
 from getInductanceAxi import getInductanceAxi
-from helperFunctions import getWaveformMath, calcCapacitance, myrms, getSpectrum, sortData, displayLossDensityTable
+from helperFunctions import getWaveformMath, calcCapacitance, myrms, getSpectrum, sortData, displayLossDensityTable, plotFluxDensityComponent
 from corelossSullivan import corelossSullivan
 
 # Specify which windings should be simulated
@@ -294,6 +294,11 @@ for simCounter in range(len(simDesign)):
                 
             # Display the loss densities and Hdc values in a table
             displayLossDensityTable(areaNames, result[simnum].loss_core_area, result[simnum].Hdc, vol, simnum)
+            
+            # Plot Bx and By waveforms for each area
+            if simParam.SHOWPLOTS:
+                plotFluxDensityComponent(areaNames, result[simnum].bx_waveform, time_interpol, 'Bx', simnum)
+                plotFluxDensityComponent(areaNames, result[simnum].by_waveform, time_interpol, 'By', simnum)
             
             # Sum losses for different parts as indicated by their by prefix (before first underscore)
             if simnum == 0:
