@@ -110,7 +110,13 @@ for simCounter in range(len(simDesign)):
             else:
                 result[simnum].fs = float(simParam.Vin * simParam.Ts * (1 - simParam.D) / (2 * result[simnum].L_self * leg_ripple) * \
                     (2 / (1 + result[simnum].k) * (simParam.D - 0.5) + 1 / (1 - result[simnum].k)))
-            msg.print_msg(2, f"fs = {result[simnum].fs*1e-6:.2f} MHz\n", simParam)
+            
+            msg.print_msg(2, f"fs (calculated) = {result[simnum].fs*1e-6:.2f} MHz\n", simParam)
+
+            # Check if frequency should be overwritten
+            if simParam.fs_overwrite > 0:
+                result[simnum].fs = simParam.fs_overwrite
+                msg.print_msg(2, f"fs (overwritten) = {result[simnum].fs*1e-6:.2f} MHz\n", simParam)
         
             ## Get the waveform
             current, time_array = getWaveformMath(simParam, result[simnum].fs, result[simnum])
@@ -145,8 +151,14 @@ for simCounter in range(len(simDesign)):
             # Currents are identical, just phase-shifted so they contain the same
             # absolute frequency components. Therefore both calls to sortData return
             # the same order of frequencies.
-            amp1_sorted, f_sorted = sortData(amplitude_1, f)
-            amp2_sorted, _ = sortData(amplitude_2, f)
+            # Keep the first entry (DC component) unchanged and sort the rest
+            amp1_sorted_rest, f_sorted_rest = sortData(amplitude_1[1:], f[1:])
+            amp2_sorted_rest, _ = sortData(amplitude_2[1:], f[1:])
+            
+            # Prepend the first entry back
+            amp1_sorted = np.concatenate([[amplitude_1[0]], amp1_sorted_rest])
+            amp2_sorted = np.concatenate([[amplitude_2[0]], amp2_sorted_rest])
+            f_sorted = np.concatenate([[f[0]], f_sorted_rest])
         
             # Initialize some variables depending on which simulation is
             # currently running
@@ -279,15 +291,54 @@ for simCounter in range(len(simDesign)):
             loss_const = res_dc * (myrms(time_array, current['i1'])**2 + myrms(time_array, current['i2'])**2)
             msg.print_msg(1, f"Increase in resisitivy: {100*(result[simnum].loss_copper/loss_const-1):.0f} % \n", simParam)
     
+            # Create piecewise linear approximation of Bx and By waveforms using least squares
+            # The linear waveforms will have nodes at the same timestamps as the current waveforms
+            msg.print_msg(2, "Creating piecewise linear flux density waveforms using least squares...\n", simParam)
+            
+            # Initialize linear waveforms with the same timestamps as current waveforms
+            result[simnum].bx_waveform_linear = np.zeros((len(areaCenters[0]), len(time_array)))
+            result[simnum].by_waveform_linear = np.zeros((len(areaCenters[0]), len(time_array)))
+            
+            # For each area, fit a piecewise linear function to the sinusoidal waveform
+            for i in range(len(areaNames)):
+                # Interpolate the sinusoidal waveform to match the current timestamps
+                bx_interp = np.interp(time_array, time_interpol, result[simnum].bx_waveform[i, :])
+                by_interp = np.interp(time_array, time_interpol, result[simnum].by_waveform[i, :])
+                
+                # Create the design matrix for least squares (piecewise linear basis functions)
+                # We have len(time_array) nodes and len(time_interpol) data points
+                A = np.zeros((len(time_interpol), len(time_array)))
+                
+                for j, t in enumerate(time_interpol):
+                    # Find which segment this time falls into
+                    for k in range(len(time_array) - 1):
+                        if time_array[k] <= t <= time_array[k+1]:
+                            # Linear interpolation weights
+                            alpha = (time_array[k+1] - t) / (time_array[k+1] - time_array[k])
+                            A[j, k] = alpha
+                            A[j, k+1] = 1 - alpha
+                            break
+                
+                # Solve least squares: min ||A*x - b||^2
+                # For Bx
+                bx_nodes, residual_bx, rank, s = np.linalg.lstsq(A, result[simnum].bx_waveform[i, :], rcond=None)
+                result[simnum].bx_waveform_linear[i, :] = bx_nodes
+                
+                # For By
+                by_nodes, residual_by, rank, s = np.linalg.lstsq(A, result[simnum].by_waveform[i, :], rcond=None)
+                result[simnum].by_waveform_linear[i, :] = by_nodes
+            
             # Compute the loss-density for each area using iGSE
             result[simnum].loss_core = 0
             for i in range(len(areaNames)):
                 # Calculate loss in x and y direction independently
-                result[simnum].bx_waveform[i, -1] = result[simnum].bx_waveform[i, 0]    # Somehow needed for the coreloss script to work
-                result[simnum].by_waveform[i, -1] = result[simnum].by_waveform[i, 0]    # Somehow needed for the coreloss script to work
+                # Make sure the first and last points are identical for periodicity
+                result[simnum].bx_waveform_linear[i, -1] = result[simnum].bx_waveform_linear[i, 0]
+                result[simnum].by_waveform_linear[i, -1] = result[simnum].by_waveform_linear[i, 0]
+                
                 # loss density in mW/cm^3 = kW/m^3
-                result[simnum].loss_core_area[i] = corelossSullivan(time_interpol, result[simnum].bx_waveform[i, :], myind.material, 1) + \
-                    corelossSullivan(time_interpol, result[simnum].by_waveform[i, :], myind.material, 1)
+                result[simnum].loss_core_area[i] = corelossSullivan(time_array, result[simnum].bx_waveform_linear[i, :], myind.material, 1) + \
+                    corelossSullivan(time_array, result[simnum].by_waveform_linear[i, :], myind.material, 1)
                 msg.print_msg(5, f"    {areaNames[i]}: {result[simnum].loss_core_area[i]:.0f} mW/cm^3\n", simParam)
                 # Total loss in W
                 result[simnum].loss_core = result[simnum].loss_core + result[simnum].loss_core_area[i] * vol[i] * 1e3
@@ -297,8 +348,12 @@ for simCounter in range(len(simDesign)):
             
             # Plot Bx and By waveforms for each area
             if simParam.SHOWPLOTS:
-                plotFluxDensityComponent(areaNames, result[simnum].bx_waveform, time_interpol, 'Bx', simnum)
-                plotFluxDensityComponent(areaNames, result[simnum].by_waveform, time_interpol, 'By', simnum)
+                #plotFluxDensityComponent(areaNames, result[simnum].bx_waveform, time_interpol, 'Bx', simnum)
+                #plotFluxDensityComponent(areaNames, result[simnum].by_waveform, time_interpol, 'By', simnum)
+                
+                # Plot the piecewise linear waveforms
+                plotFluxDensityComponent(areaNames, result[simnum].bx_waveform_linear, time_array, 'Bx', simnum)
+                plotFluxDensityComponent(areaNames, result[simnum].by_waveform_linear, time_array, 'By', simnum)
             
             # Sum losses for different parts as indicated by their by prefix (before first underscore)
             if simnum == 0:

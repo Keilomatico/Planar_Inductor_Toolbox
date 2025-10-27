@@ -56,13 +56,13 @@ class SimulationParameters:
         # planar simulation because axisymmetric cannot reflect coupling
         # (except for designs with both windigs on one limb but that is 
         # too special to make an exception)
-        self.SIMULATIONS = [1, 1]
+        self.SIMULATIONS = [1, 0]
         # Calculate the required capacitance
         self.CALC_CAP = True
         # Show plots
         self.SHOWPLOTS = 1
         # Show the design in the end
-        self.SHOWDESIGN = 1
+        self.SHOWDESIGN = 0
         # Which simulation to show: 0 = planar, 1 = axisymmetric
         self.SHOWDESIGN_SIMULATION = 0
     
@@ -82,7 +82,7 @@ class SimulationParameters:
 
         # Choose if you want to reuse previously generated files. Not all parameters are embedded into
         # the filename, so this may lead to wrong results. Check uniqueName for the included parameters.
-        self.reuse_file = 0
+        self.reuse_file = 1
 
         # Path to the folder in which the femm-files are stored
         self.femm_folder = 'femm'
@@ -102,10 +102,15 @@ class SimulationParameters:
         self.Vin = 48
         self.Vout = 12
         # Average output current for both phases together
-        self.iout_avg = 80
+        self.iout_avg = 0.01
         # Frequency at which the inductance is measured. Doesn't really matter
         # whether it's 1 or 3 MHz, but difference to DC is big.
         self.target_fs = 1.5e6
+        
+        # Overwrite the calculated switching frequency with a fixed value [Hz]
+        # Set to -1 to use the calculated frequency (default behavior)
+        # If set to a positive value, this frequency will be used instead of calculating it
+        self.fs_overwrite = 2e6
 
         # Desired input and output ripple for capacitor calculation
         self.DeltaVinMax = 150e-3

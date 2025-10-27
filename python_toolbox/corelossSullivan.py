@@ -416,17 +416,43 @@ def calcseg(t, B, alpha, beta, k1, a):
     bmaa = (beta - alpha) * a  # exponent of Bpp
 
     Bpp = max(B) - min(B)
+    
+    # Handle case where Bpp is zero or very small (no flux variation)
+    if Bpp < 1e-12:
+        return 0.0
 
-    if np.sum(B < 0) > 0:
+    # Always call makepositive to ensure proper handling of zero crossings
+    # This splits the waveform at zero crossings
+    if np.any(B < 0):
         t, B = makepositive(t, B)
 
     length = len(t)
     T = t[length-1] - t[0]
+    
+    # Handle case where T is zero or very small
+    if T < 1e-15:
+        return 0.0
+    
     deltaB = np.abs(B[1:length] - B[0:length-1])
     deltat = t[1:length] - t[0:length-1]
+    
+    # Avoid division by zero in dBdt
+    deltat = np.maximum(deltat, 1e-15)
     dBdt = deltaB / deltat
-    m1 = dBdt ** (alpha - 1)
-    m2 = np.abs((B[1:length]) ** (bma1a + 1) - (B[0:length-1]) ** (bma1a + 1))
+    
+    # Handle the case where dBdt is zero (no flux change)
+    # When alpha-1 is negative and dBdt is zero, we get infinity
+    # In this case, the contribution to loss should be zero
+    m1 = np.where(dBdt > 1e-15, dBdt ** (alpha - 1), 0.0)
+    
+    # For the B term, ensure all B values are positive before taking fractional power
+    B_pos = np.abs(B)  # Ensure positive values
+    
+    # Calculate m2 with proper handling of zero values
+    B1_term = np.where(B_pos[1:length] > 1e-15, B_pos[1:length] ** (bma1a + 1), 0.0)
+    B0_term = np.where(B_pos[0:length-1] > 1e-15, B_pos[0:length-1] ** (bma1a + 1), 0.0)
+    m2 = np.abs(B1_term - B0_term)
+    
     pseg = k1 / T / (bma1a + 1) * np.sum(m1 * m2) * Bpp ** bmaa
     
     return pseg
