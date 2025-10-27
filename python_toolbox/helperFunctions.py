@@ -256,19 +256,21 @@ def calcCapacitance(time, current, res, simParam):
     
     return res
 
-def displayLossDensityTable(areaNames, loss_core_area, Hdc, simnum):
+def displayLossDensityTable(areaNames, loss_core_area, Hdc, vol, simnum):
     """Displays a formatted table of core loss densities and DC magnetic field values
     
     Args:
         areaNames: List of area names
-        loss_core_area: Array of loss densities [mW/cm³]
+        loss_core_area: Array of loss densities [W/cm³]
         Hdc: Array of DC magnetic field values [A/m]
+        vol: Array of volumes [mm³]
         simnum: Simulation number (0 for planar, 1 for axisymmetric)
     """
     # Create DataFrames and sort by loss density
     myPtable = pd.DataFrame({
         'Area': areaNames,
-        'Loss': loss_core_area[:len(areaNames)]
+        'Loss': loss_core_area[:len(areaNames)],
+        'Volume': vol[:len(areaNames)]
     })
     myPtable = myPtable.sort_values('Loss', ascending=False)
     
@@ -281,38 +283,45 @@ def displayLossDensityTable(areaNames, loss_core_area, Hdc, simnum):
     # Create a combined table for visualization
     combined_table = pd.DataFrame({
         'Area': myPtable['Area'].values,
-        'Loss Density [mW/cm³]': myPtable['Loss'].values
+        'Loss Density [W/cm³]': myPtable['Loss'].values,
+        'Volume [mm³]': myPtable['Volume'].values
     })
+    
+    # Calculate total loss per area in mW (loss density [W/cm³] * volume [mm³] * 1e-3 [cm³/mm³])
+    combined_table['Loss [mW]'] = combined_table['Loss Density [W/cm³]'] * combined_table['Volume [mm³]'] * 1e6
     
     # Add Hdc values in the same order as loss densities
     hdc_dict = dict(zip(myHtable['Area'], myHtable['Hdc']))
     combined_table['Hdc [A/m]'] = combined_table['Area'].map(hdc_dict)
     
     # Format the data for display
-    col_headers = ['Area', 'Loss Density [mW/cm³]', 'Hdc [A/m]']
+    col_headers = ['Area', 'Loss Density [W/cm³]', 'Loss [mW]', 'Hdc [A/m]']
     table_data = []
     for idx, row in combined_table.iterrows():
         table_data.append([
             row['Area'],
-            f"{row['Loss Density [mW/cm³]']:.1f}",
+            f"{row['Loss Density [W/cm³]']:.1f}",
+            f"{row['Loss [mW]']:.1f}",
             f"{row['Hdc [A/m]']:.1f}"
         ])
     
     # Calculate column widths based on content
     max_area_len = max([len(str(name)) for name in combined_table['Area']])
-    max_loss_len = len('Loss Density [mW/cm³]')  # Header is typically longest
-    max_hdc_len = len('Hdc [A/m]')  # Header is typically longest
+    max_loss_density_len = len('Loss Density [W/cm³]')
+    max_total_loss_len = len('Loss [mW]')
+    max_hdc_len = len('Hdc [A/m]')
     
     # Calculate relative widths (add padding factor)
-    total_len = max_area_len + max_loss_len + max_hdc_len
+    total_len = max_area_len + max_loss_density_len + max_total_loss_len + max_hdc_len
     col_widths = [
         max_area_len / total_len * 1.1,
-        max_loss_len / total_len * 1.1,
+        max_loss_density_len / total_len * 1.1,
+        max_total_loss_len / total_len * 1.1,
         max_hdc_len / total_len * 1.1
     ]
     
     # Adjust figure width based on content
-    fig_width = min(12, max(6, total_len * 0.08))
+    fig_width = min(14, max(8, total_len * 0.08))
     
     # Display table in plot window
     fig, ax = plt.subplots(figsize=(fig_width, len(areaNames) * 0.4 + 1))
@@ -334,17 +343,18 @@ def displayLossDensityTable(areaNames, loss_core_area, Hdc, simnum):
     table.scale(1, 2)
     
     # Style the header
-    for i in range(3):
+    for i in range(4):
         table[(0, i)].set_facecolor('#4472C4')
         table[(0, i)].set_text_props(weight='bold', color='white')
     
     # Alternate row colors
     for i in range(1, len(table_data) + 1):
-        for j in range(3):
+        for j in range(4):
             if i % 2 == 0:
                 table[(i, j)].set_facecolor('#E7E6E6')
             else:
                 table[(i, j)].set_facecolor('#F2F2F2')
     
     plt.tight_layout()
+
 

@@ -281,7 +281,6 @@ for simCounter in range(len(simDesign)):
     
             # Compute the loss-density for each area using iGSE
             result[simnum].loss_core = 0
-            msg.print_msg(3, "Loss densities [mW/cm^3]: \n", simParam)
             for i in range(len(areaNames)):
                 # Calculate loss in x and y direction independently
                 result[simnum].bx_waveform[i, -1] = result[simnum].bx_waveform[i, 0]    # Somehow needed for the coreloss script to work
@@ -294,7 +293,7 @@ for simCounter in range(len(simDesign)):
                 result[simnum].loss_core = result[simnum].loss_core + result[simnum].loss_core_area[i] * vol[i] * 1e3
                 
             # Display the loss densities and Hdc values in a table
-            displayLossDensityTable(areaNames, result[simnum].loss_core_area, result[simnum].Hdc, simnum)
+            displayLossDensityTable(areaNames, result[simnum].loss_core_area, result[simnum].Hdc, vol, simnum)
 
             # Multiply overall core loss depending on the amout of symmetry
             if simnum == 0:
