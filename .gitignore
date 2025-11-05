@@ -2,6 +2,8 @@
 femm/
 logfiles/
 data/
+__pycache__/
+.spyproject/
 
 # FEMM
 *.ans
