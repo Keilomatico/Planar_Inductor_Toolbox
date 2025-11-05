@@ -69,3 +69,28 @@ class Material:
             B = 50e-3
             self.k = P / (f**self.fexp * B**self.bexp)
             self.mu = 800
+        elif materialName == "67":
+            # Fair Rite Material 67
+            self.fexp = 1.42849
+            self.bexp = 2.11143
+            self.k = 0.000704149
+            self.mu = 40
+    
+    def getMaterialLoss(self, frequency, flux_density):
+        """
+        Calculate the core loss density using the Steinmetz equation.
+        
+        Parameters:
+        -----------
+        frequency : float
+            Frequency in Hz
+        flux_density : float
+            Flux density in Tesla (T)
+            
+        Returns:
+        --------
+        float
+            Power loss density in W/m³ (or kW/m³ depending on k parameter)
+        """
+        loss_density = self.k * (frequency ** self.fexp) * (flux_density ** self.bexp)
+        return loss_density
